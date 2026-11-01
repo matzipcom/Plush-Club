@@ -183,18 +183,18 @@
 	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 	<script>
 		const places = [
-			{ id: 1, name: "을지로 골목식당", category: "한식 · 제육볶음", region: "서울", rating: 4.8, reviews: 328, address: "서울 중구 을지로", food: "🍲", lat: 37.5665, lng: 126.991 },
-			{ id: 2, name: "광장시장 빈대떡", category: "전 · 막걸리", region: "서울", rating: 4.7, reviews: 512, address: "서울 종로구 창경궁로", food: "🥞", lat: 37.5701, lng: 126.9997 },
-			{ id: 3, name: "해운대 바다국밥", category: "돼지국밥 · 수육", region: "부산", rating: 4.9, reviews: 241, address: "부산 해운대구 중동", food: "🍜", lat: 35.1631, lng: 129.1635 },
-			{ id: 4, name: "남포동 씨앗호떡", category: "간식 · 호떡", region: "부산", rating: 4.6, reviews: 687, address: "부산 중구 남포길", food: "🥯", lat: 35.0988, lng: 129.0293 },
-			{ id: 5, name: "동성로 납작만두", category: "분식 · 만두", region: "대구", rating: 4.7, reviews: 193, address: "대구 중구 동성로", food: "🥟", lat: 35.8692, lng: 128.5961 },
-			{ id: 6, name: "전주 왱이콩나물국밥", category: "한식 · 콩나물국밥", region: "전주", rating: 4.8, reviews: 394, address: "전북 전주시 완산구", food: "🍚", lat: 35.8174, lng: 127.148 },
-			{ id: 7, name: "수원 화성갈비", category: "고기 · 돼지갈비", region: "수원", rating: 4.9, reviews: 276, address: "경기 수원시 팔달구", food: "🥩", lat: 37.2849, lng: 127.0194 },
-			{ id: 8, name: "강릉 초당순두부", category: "한식 · 순두부", region: "강릉", rating: 4.6, reviews: 188, address: "강원 강릉시 초당동", food: "🍲", lat: 37.7915, lng: 128.914 },
-			{ id: 9, name: "제주 돌담 흑돼지", category: "고기 · 흑돼지", region: "제주", rating: 4.8, reviews: 421, address: "제주 제주시 애월읍", food: "🍖", lat: 33.462, lng: 126.328 },
-			{ id: 10, name: "대전 성심당 본점", category: "베이커리 · 빵", region: "대전", rating: 4.9, reviews: 1024, address: "대전 중구 대종로", food: "🥐", lat: 36.3275, lng: 127.4272 },
-			{ id: 11, name: "인천 신포닭강정", category: "치킨 · 닭강정", region: "인천", rating: 4.7, reviews: 582, address: "인천 중구 우현로", food: "🍗", lat: 37.4738, lng: 126.6248 },
-			{ id: 12, name: "여수 낭만포차 해물삼합", category: "해산물 · 삼합", region: "여수", rating: 4.8, reviews: 307, address: "전남 여수시 하멜로", food: "🦐", lat: 34.7406, lng: 127.746 }
+			{ id: 1, name: "을지로 골목식당", category: "한식 · 제육볶음", region: "서울", rating: 4.8, reviews: 328, address: "서울 중구 을지로3가 일대 · 을지로3가역 인근", food: "🍲", lat: 37.5665, lng: 126.991 },
+			{ id: 2, name: "광장시장 빈대떡", category: "전 · 막걸리", region: "서울", rating: 4.7, reviews: 512, address: "서울 종로구 창경궁로 88 · 광장시장 먹자골목", food: "🥞", lat: 37.5701, lng: 126.9997 },
+			{ id: 3, name: "해운대 바다국밥", category: "돼지국밥 · 수육", region: "부산", rating: 4.9, reviews: 241, address: "부산 해운대구 구남로 일대 · 해운대역·해운대시장 인근", food: "🍜", lat: 35.1631, lng: 129.1635 },
+			{ id: 4, name: "남포동 씨앗호떡", category: "간식 · 호떡", region: "부산", rating: 4.6, reviews: 687, address: "부산 중구 비프광장로 일대 · BIFF 광장 씨앗호떡 거리", food: "🥯", lat: 35.0988, lng: 129.0293 },
+			{ id: 5, name: "동성로 납작만두", category: "분식 · 만두", region: "대구", rating: 4.7, reviews: 193, address: "대구 중구 동성로2길 일대 · 중앙로역 인근", food: "🥟", lat: 35.8692, lng: 128.5961 },
+			{ id: 6, name: "전주 왱이콩나물국밥", category: "한식 · 콩나물국밥", region: "전주", rating: 4.8, reviews: 394, address: "전북 전주시 완산구 동문길 88 · 전주 한옥마을 북동쪽", food: "🍚", lat: 35.8174, lng: 127.148 },
+			{ id: 7, name: "수원 화성갈비", category: "고기 · 돼지갈비", region: "수원", rating: 4.9, reviews: 276, address: "경기 수원시 팔달구 정조로 일대 · 팔달문 인근", food: "🥩", lat: 37.2849, lng: 127.0194 },
+			{ id: 8, name: "강릉 초당순두부", category: "한식 · 순두부", region: "강릉", rating: 4.6, reviews: 188, address: "강원 강릉시 초당순두부길 일대 · 초당두부마을", food: "🍲", lat: 37.7915, lng: 128.914 },
+			{ id: 9, name: "제주 돌담 흑돼지", category: "고기 · 흑돼지", region: "제주", rating: 4.8, reviews: 421, address: "제주 제주시 애월읍 애월해안로 일대 · 한담해변 인근", food: "🍖", lat: 33.462, lng: 126.328 },
+			{ id: 10, name: "대전 성심당 본점", category: "베이커리 · 빵", region: "대전", rating: 4.9, reviews: 1024, address: "대전 중구 대종로480번길 15 · 은행동 성심당 본점", food: "🥐", lat: 36.3275, lng: 127.4272 },
+			{ id: 11, name: "인천 신포닭강정", category: "치킨 · 닭강정", region: "인천", rating: 4.7, reviews: 582, address: "인천 중구 우현로 6-1 · 신포국제시장 안", food: "🍗", lat: 37.4738, lng: 126.6248 },
+			{ id: 12, name: "여수 낭만포차 해물삼합", category: "해산물 · 삼합", region: "여수", rating: 4.8, reviews: 307, address: "전남 여수시 하멜로 일대 · 종포해양공원 낭만포차거리", food: "🦐", lat: 34.7406, lng: 127.746 }
 		];
 		const regions = ["전체", "서울", "부산", "대구", "인천", "대전", "수원", "강릉", "전주", "여수", "제주"];
 		const map = L.map("map", { zoomControl: false, scrollWheelZoom: true }).setView([36.3, 127.8], 7);
