@@ -81,7 +81,6 @@ let authPending = false;
 let pendingConfirmationEmail = "";
 let darkMode = false;
 try { darkMode = localStorage.getItem("plush-club-theme-v1") === "dark"; } catch { /* Keep the default light theme if storage is unavailable. */ }
-let sceneRef, keyLightRef, fillLightRef, interiorLightRef, hemisphereLightRef;
 function applyTheme() {
 	const theme = darkMode ? "dark" : "light";
 	document.documentElement.dataset.theme = theme;
@@ -90,35 +89,14 @@ function applyTheme() {
 	themeToggle.title = darkMode ? "라이트 모드 켜기" : "다크 모드 켜기";
 	themeToggle.setAttribute("aria-pressed", String(darkMode));
 	document.querySelector('meta[name="theme-color"]').content = darkMode ? "#151d1a" : "#f2f1e9";
-	if (sceneRef && keyLightRef && fillLightRef && interiorLightRef && hemisphereLightRef) {
-		if (darkMode) {
-			sceneRef.background.set("#1a2622");
-			sceneRef.fog.color.set("#1a2622");
-			keyLightRef.intensity = 1.8;
-			fillLightRef.intensity = 45;
-			interiorLightRef.intensity = 80;
-			hemisphereLightRef.skyColor.set(0x2a3a35);
-			hemisphereLightRef.groundColor.set(0x1a2622);
-			hemisphereLightRef.intensity = 1.2;
-		} else {
-			sceneRef.background.set("#dcebe0");
-			sceneRef.fog.color.set("#dcebe0");
-			keyLightRef.intensity = 3.2;
-			fillLightRef.intensity = 82;
-			interiorLightRef.intensity = 62;
-			hemisphereLightRef.skyColor.set(0xf7fff4);
-			hemisphereLightRef.groundColor.set(0x829586);
-			hemisphereLightRef.intensity = 2.1;
-		}
-	}
 	try { localStorage.setItem("plush-club-theme-v1", theme); } catch { /* Keep the selected theme for this page. */ }
 }
+applyTheme();
 themeToggle.addEventListener("click", () => {
 	darkMode = !darkMode;
 	applyTheme();
 });
 const scene = new THREE.Scene();
-sceneRef = scene;
 scene.background = new THREE.Color("#dcebe0");
 scene.fog = new THREE.Fog("#dcebe0", 19, 38);
 
@@ -269,26 +247,25 @@ const cameraDrag = { pointerId: null, x: 0, y: 0, startX: 0, startY: 0 };
 const pointerNdc = new THREE.Vector2();
 const interactionRaycaster = new THREE.Raycaster();
 const adInquiryUrl = "https://www.instagram.com/9sept10th/";
-hemisphereLightRef = new THREE.HemisphereLight(0xf7fff4, 0x829586, 2.1);
-scene.add(hemisphereLightRef);
+scene.add(new THREE.HemisphereLight(0xf7fff4, 0x829586, 2.1));
 
-keyLightRef = new THREE.DirectionalLight(0xfff0d7, 3.2);
-keyLightRef.position.set(-5, 10, 7);
-keyLightRef.castShadow = true;
-keyLightRef.shadow.mapSize.set(1536, 1536);
-keyLightRef.shadow.camera.left = -8;
-keyLightRef.shadow.camera.right = 8;
-keyLightRef.shadow.camera.top = 10;
-keyLightRef.shadow.camera.bottom = -5;
-keyLightRef.shadow.bias = -0.0004;
-scene.add(keyLightRef);
+const keyLight = new THREE.DirectionalLight(0xfff0d7, 3.2);
+keyLight.position.set(-5, 10, 7);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(1536, 1536);
+keyLight.shadow.camera.left = -8;
+keyLight.shadow.camera.right = 8;
+keyLight.shadow.camera.top = 10;
+keyLight.shadow.camera.bottom = -5;
+keyLight.shadow.bias = -0.0004;
+scene.add(keyLight);
 
-fillLightRef = new THREE.PointLight(0xe8a68d, 82, 16, 2);
-fillLightRef.position.set(4, 4.5, 5);
-scene.add(fillLightRef);
-interiorLightRef = new THREE.PointLight(0xffdf9c, 62, 12, 2);
-interiorLightRef.position.set(-2.2, 5.2, -0.5);
-scene.add(interiorLightRef);
+const fillLight = new THREE.PointLight(0xe8a68d, 82, 16, 2);
+fillLight.position.set(4, 4.5, 5);
+scene.add(fillLight);
+const interiorLight = new THREE.PointLight(0xffdf9c, 62, 12, 2);
+interiorLight.position.set(-2.2, 5.2, -0.5);
+scene.add(interiorLight);
 
 const material = (color, roughness = 0.55, metalness = 0) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
 const mats = {
@@ -2279,7 +2256,6 @@ window.addEventListener("resize", resize);
 resize();
 updateCoinClaimButtons();
 updateDailyBonusButton();
-applyTheme();
 window.setInterval(() => {
 	updateCoinClaimButtons();
 	updateDailyBonusButton();
