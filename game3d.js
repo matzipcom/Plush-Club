@@ -81,6 +81,7 @@ let authPending = false;
 let pendingConfirmationEmail = "";
 let darkMode = false;
 try { darkMode = localStorage.getItem("plush-club-theme-v1") === "dark"; } catch { /* Keep the default light theme if storage is unavailable. */ }
+let sceneRef, keyLightRef, fillLightRef, interiorLightRef, hemisphereLightRef;
 function applyTheme() {
 	const theme = darkMode ? "dark" : "light";
 	document.documentElement.dataset.theme = theme;
@@ -89,14 +90,35 @@ function applyTheme() {
 	themeToggle.title = darkMode ? "라이트 모드 켜기" : "다크 모드 켜기";
 	themeToggle.setAttribute("aria-pressed", String(darkMode));
 	document.querySelector('meta[name="theme-color"]').content = darkMode ? "#151d1a" : "#f2f1e9";
+	if (sceneRef && keyLightRef && fillLightRef && interiorLightRef && hemisphereLightRef) {
+		if (darkMode) {
+			sceneRef.background.set("#1a2622");
+			sceneRef.fog.color.set("#1a2622");
+			keyLightRef.intensity = 1.8;
+			fillLightRef.intensity = 45;
+			interiorLightRef.intensity = 80;
+			hemisphereLightRef.skyColor.set(0x2a3a35);
+			hemisphereLightRef.groundColor.set(0x1a2622);
+			hemisphereLightRef.intensity = 1.2;
+		} else {
+			sceneRef.background.set("#dcebe0");
+			sceneRef.fog.color.set("#dcebe0");
+			keyLightRef.intensity = 3.2;
+			fillLightRef.intensity = 82;
+			interiorLightRef.intensity = 62;
+			hemisphereLightRef.skyColor.set(0xf7fff4);
+			hemisphereLightRef.groundColor.set(0x829586);
+			hemisphereLightRef.intensity = 2.1;
+		}
+	}
 	try { localStorage.setItem("plush-club-theme-v1", theme); } catch { /* Keep the selected theme for this page. */ }
 }
-applyTheme();
 themeToggle.addEventListener("click", () => {
 	darkMode = !darkMode;
 	applyTheme();
 });
 const scene = new THREE.Scene();
+sceneRef = scene;
 scene.background = new THREE.Color("#dcebe0");
 scene.fog = new THREE.Fog("#dcebe0", 19, 38);
 
@@ -247,25 +269,26 @@ const cameraDrag = { pointerId: null, x: 0, y: 0, startX: 0, startY: 0 };
 const pointerNdc = new THREE.Vector2();
 const interactionRaycaster = new THREE.Raycaster();
 const adInquiryUrl = "https://www.instagram.com/9sept10th/";
-scene.add(new THREE.HemisphereLight(0xf7fff4, 0x829586, 2.1));
+hemisphereLightRef = new THREE.HemisphereLight(0xf7fff4, 0x829586, 2.1);
+scene.add(hemisphereLightRef);
 
-const keyLight = new THREE.DirectionalLight(0xfff0d7, 3.2);
-keyLight.position.set(-5, 10, 7);
-keyLight.castShadow = true;
-keyLight.shadow.mapSize.set(1536, 1536);
-keyLight.shadow.camera.left = -8;
-keyLight.shadow.camera.right = 8;
-keyLight.shadow.camera.top = 10;
-keyLight.shadow.camera.bottom = -5;
-keyLight.shadow.bias = -0.0004;
-scene.add(keyLight);
+keyLightRef = new THREE.DirectionalLight(0xfff0d7, 3.2);
+keyLightRef.position.set(-5, 10, 7);
+keyLightRef.castShadow = true;
+keyLightRef.shadow.mapSize.set(1536, 1536);
+keyLightRef.shadow.camera.left = -8;
+keyLightRef.shadow.camera.right = 8;
+keyLightRef.shadow.camera.top = 10;
+keyLightRef.shadow.camera.bottom = -5;
+keyLightRef.shadow.bias = -0.0004;
+scene.add(keyLightRef);
 
-const fillLight = new THREE.PointLight(0xe8a68d, 82, 16, 2);
-fillLight.position.set(4, 4.5, 5);
-scene.add(fillLight);
-const interiorLight = new THREE.PointLight(0xffdf9c, 62, 12, 2);
-interiorLight.position.set(-2.2, 5.2, -0.5);
-scene.add(interiorLight);
+fillLightRef = new THREE.PointLight(0xe8a68d, 82, 16, 2);
+fillLightRef.position.set(4, 4.5, 5);
+scene.add(fillLightRef);
+interiorLightRef = new THREE.PointLight(0xffdf9c, 62, 12, 2);
+interiorLightRef.position.set(-2.2, 5.2, -0.5);
+scene.add(interiorLightRef);
 
 const material = (color, roughness = 0.55, metalness = 0) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
 const mats = {
@@ -983,13 +1006,14 @@ function saveCurrentAccount() {
 }
 
 async function loadSupabaseProfile(user) {
-	const { data, error } = await supabaseClient.from("profiles").select("id, username, coins, next_coin_claim_at, politics_room_purchased, bag").eq("id", user.id).single();
+	const { data, error } = await supabaseClient.from("profiles").select("id, username, coins, next_coin_claim_at, next_daily_bonus_at, politics_room_purchased, bag").eq("id", user.id).single();
 	if (error) throw error;
 	return {
 		id: data.id,
 		username: data.username,
 		coins: Number.isSafeInteger(data.coins) && data.coins >= 0 ? data.coins : 0,
 		nextCoinClaimAt: data.next_coin_claim_at ? new Date(data.next_coin_claim_at).getTime() : 0,
+		nextDailyBonusAt: data.next_daily_bonus_at ? new Date(data.next_daily_bonus_at).getTime() : 0,
 		politicsRoomPurchased: data.politics_room_purchased === true,
 		bag: Array.isArray(data.bag) ? data.bag : [],
 	};
@@ -1247,10 +1271,11 @@ function makeToyPortrait(kind, color) {
 
 async function reloadCurrentProfile() {
 	if (!supabaseClient || !currentAccount?.id) throw new Error("로그인한 Supabase 계정이 필요합니다.");
-	const { data, error } = await supabaseClient.from("profiles").select("id, username, coins, next_coin_claim_at, politics_room_purchased, bag").eq("id", currentAccount.id).single();
+	const { data, error } = await supabaseClient.from("profiles").select("id, username, coins, next_coin_claim_at, next_daily_bonus_at, politics_room_purchased, bag").eq("id", currentAccount.id).single();
 	if (error) throw error;
 	currentAccount.coins = data.coins;
 	currentAccount.nextCoinClaimAt = data.next_coin_claim_at ? new Date(data.next_coin_claim_at).getTime() : 0;
+	currentAccount.nextDailyBonusAt = data.next_daily_bonus_at ? new Date(data.next_daily_bonus_at).getTime() : 0;
 	currentAccount.politicsRoomPurchased = data.politics_room_purchased === true;
 	currentAccount.bag = Array.isArray(data.bag) ? data.bag : [];
 	coinsLabel.textContent = String(currentAccount.coins);
@@ -1386,6 +1411,7 @@ function refreshAccountDisplay() {
 	}
 	setBusy(clawState.mode !== "ready");
 	updateCoinClaimButtons();
+	updateDailyBonusButton();
 }
 
 function updateCoinClaimButtons() {
@@ -1408,21 +1434,18 @@ function updateCoinClaimButtons() {
 }
 
 function updateDailyBonusButton() {
-	if (!dailyBonusButton) return;
 	const now = Date.now();
-	const nextClaimAt = currentAccount ? currentAccount.nextDailyBonusAt || 0 : guestNextDailyBonusAt;
+	const nextClaimAt = currentAccount?.nextDailyBonusAt || guestNextDailyBonusAt;
 	const remaining = Math.max(0, nextClaimAt - now);
 	if (remaining === 0) {
 		dailyBonusButton.textContent = "🎁 일일 보너스 (200코인)";
-		dailyBonusButton.title = "24시간마다 200코인 받기";
+		dailyBonusButton.title = "하루에 한 번 200코인 받기";
 		dailyBonusButton.disabled = false;
 		return;
 	}
-	const seconds = Math.ceil(remaining / 1000);
-	const hours = Math.floor(seconds / 3600);
-	const minutes = Math.floor((seconds % 3600) / 60);
-	dailyBonusButton.textContent = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
-	dailyBonusButton.title = "일일 보너스 받기까지 남은 시간";
+	const hours = Math.ceil(remaining / (60 * 60 * 1000));
+	dailyBonusButton.textContent = `🎁 ${hours}시간 후`;
+	dailyBonusButton.title = "다음 일일 보너스까지 남은 시간";
 	dailyBonusButton.disabled = true;
 }
 
@@ -1992,9 +2015,6 @@ async function claimCoins() {
 	}
 }
 
-accountClaimButton.addEventListener("click", claimCoins);
-guestClaimButton.addEventListener("click", claimCoins);
-
 async function claimDailyBonus() {
 	if (!authGate.hidden || dailyBonusClaimPending) return;
 	const nextClaimAt = currentAccount ? currentAccount.nextDailyBonusAt || 0 : guestNextDailyBonusAt;
@@ -2012,21 +2032,21 @@ async function claimDailyBonus() {
 			currentAccount.nextDailyBonusAt = data.next_daily_bonus_at ? new Date(data.next_daily_bonus_at).getTime() : 0;
 			coinsLabel.textContent = String(currentAccount.coins);
 			status.textContent = data.ok
-				? `${dailyBonusAmount}코인 일일 보너스를 받았어요! 내일 이 시간에 다시 받을 수 있어요.`
+				? `${dailyBonusAmount}코인 일일 보너스를 받았어요! 내일 다시 받을 수 있어요.`
 				: "아직 일일 보너스를 받을 수 없어요. 남은 시간을 확인해 주세요.";
 		} else if (currentAccount) {
 			currentAccount.coins += dailyBonusAmount;
 			currentAccount.nextDailyBonusAt = Date.now() + dailyBonusCooldown;
 			saveCurrentAccount();
 			coinsLabel.textContent = String(currentAccount.coins);
-			status.textContent = `${dailyBonusAmount}코인 일일 보너스를 받았어요! 내일 이 시간에 다시 받을 수 있어요.`;
+			status.textContent = `${dailyBonusAmount}코인 일일 보너스를 받았어요! 내일 다시 받을 수 있어요.`;
 		} else {
 			guestCoins += dailyBonusAmount;
 			guestNextDailyBonusAt = Date.now() + dailyBonusCooldown;
 			saveGuestCoins();
 			saveGuestDailyBonusClaimTime();
 			guestCoinsLabel.textContent = String(guestCoins);
-			status.textContent = `${dailyBonusAmount}코인 일일 보너스를 받았어요! 내일 이 시간에 다시 받을 수 있어요.`;
+			status.textContent = `${dailyBonusAmount}코인 일일 보너스를 받았어요! 내일 다시 받을 수 있어요.`;
 		}
 		setBusy(false);
 	} catch {
@@ -2037,7 +2057,9 @@ async function claimDailyBonus() {
 	}
 }
 
-dailyBonusButton?.addEventListener("click", claimDailyBonus);
+accountClaimButton.addEventListener("click", claimCoins);
+guestClaimButton.addEventListener("click", claimCoins);
+dailyBonusButton.addEventListener("click", claimDailyBonus);
 
 document.querySelector("#openBag").addEventListener("click", () => {
 	renderBag();
@@ -2257,6 +2279,7 @@ window.addEventListener("resize", resize);
 resize();
 updateCoinClaimButtons();
 updateDailyBonusButton();
+applyTheme();
 window.setInterval(() => {
 	updateCoinClaimButtons();
 	updateDailyBonusButton();

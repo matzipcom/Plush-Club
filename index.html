@@ -4,18 +4,9 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="theme-color" content="#f2f1e9">
-	<meta name="description" content="말랑말랑 인형뽑기는 브라우저에서 직접 조이스틱과 마우스로 집게를 조작하는 무료 3D 온라인 인형뽑기 게임입니다. 실제 오락실 기계의 물리를 충실히 재현했으며, 두 가지 맵(동물 인형, 찢토피아)에서 다양한 인형을 뽑아보세요. 계정 로그인 시 뽑은 인형을 보관하고 다른 사용자와 거래할 수 있습니다.">
-	<meta name="keywords" content="인형뽑기, 클로우머신, 온라인 게임, 3D 게임, 아케이드, 웹 게임, 무료 게임">
-	<meta name="author" content="PLUSH CLUB">
-	<meta property="og:title" content="말랑말랑 인형뽑기 - 브라우저 3D 아케이드 게임">
-	<meta property="og:description" content="실제 오락실처럼 즐기는 3D 집게기계 게임. 마우스나 손가락으로 집게를 조작해 인형을 뽑아보세요!">
-	<meta property="og:type" content="website">
-	<meta property="og:url" content="https://plush-club.pages.dev/">
-	<meta name="twitter:card" content="summary_large_image">
-	<meta name="twitter:title" content="말랑말랑 인형뽑기">
-	<meta name="twitter:description" content="브라우저에서 즐기는 무료 3D 인형뽑기 게임">
+	<meta name="description" content="브라우저에서 직접 조이스틱과 키보드로 집게를 조작하는 3D 인형뽑기 게임. 동물 인형과 찢토피아를 둘러보고, 플레이 규칙과 개인정보 안내를 확인하세요.">
 	<meta name="google-adsense-account" content="ca-pub-6873890251417614">
-	<title>말랑말랑 인형뽑기 - 무료 온라인 3D 클로우머신 게임</title>
+	<title>말랑말랑 인형뽑기</title>
 	<link rel="canonical" href="https://plush-club.pages.dev/">
 	<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6873890251417614" crossorigin="anonymous"></script>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
@@ -242,7 +233,7 @@
 		.small-button { min-width: 0; height: 32px; padding: 0 9px; border: 1px solid #d5dacd; border-radius: 9px; color: var(--ink); background: #fffef9; box-shadow: none; font-size: 11px; }
 		.small-button:hover { background: #edf4eb; }
 		.add-coin-button { border-color: #e9bd64; background: #f7e7b9; font-weight: 900; }
-		.daily-bonus-button { border-color: #c8a561; background: #f4d692; font-weight: 700; color: #3a2f1a; }
+		.daily-bonus-button { border-color: #f4d692; background: #fde4a0; font-weight: 700; }
 		.bag-button { position: relative; min-width: 72px; height: 40px; padding: 0 10px; border: 1px solid #cbd9ce; border-radius: 11px; background: #edf4eb; box-shadow: none; font-size: 12px; }
 		.bag-count { margin-left: 4px; color: #638174; font-size: 11px; }
 		.auth-gate, .bag-gate { position: fixed; inset: 0; z-index: 20; }
@@ -424,7 +415,6 @@
 		.coin-display { border-color: #d7c79f; border-radius: 8px; background: #f2ecdc; }
 		.coin-value { color: #886b35; font-variant-numeric: tabular-nums; }
 		.add-coin-button { border-color: #c8a561; color: #5e4b2a; background: #e8d9b5; }
-		.daily-bonus-button { border-color: #c8a561; color: #5e4b2a; background: #f4d692; }
 		.bag-button { border-color: #c8d0c7; border-radius: 9px; color: #314b40; background: #e9eee7; }
 		.auth-panel, .bag-panel, .reward-panel {
 			border-color: #d4c8aa;
@@ -506,10 +496,6 @@
 		.site-information-links { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 28px; padding-top: 17px; border-top: 1px solid #e0e5dc; }
 		.site-information-links a { color: #315c4d; font-size: 11px; font-weight: 800; text-underline-offset: 3px; }
 		.site-information-links a:hover { color: #a45b48; }
-		.adsbygoogle { display: block !important; background: #f5f5f5; border: 1px solid #ddd; border-radius: 8px; }
-		@media (max-width: 600px) {
-			.adsbygoogle { margin-bottom: 8px !important; margin-top: 8px !important; }
-		}
 		.shop-item-info { padding: 0; border: 0; border-radius: 8px; color: var(--ink); background: transparent; box-shadow: none; font: inherit; text-align: left; cursor: pointer; }
 		.shop-item-info:hover { background: transparent; }
 		.shop-item-info:hover .shop-item-name { text-decoration: underline; text-underline-offset: 2px; }
@@ -546,7 +532,7 @@
 		:root[data-theme="dark"] .coin-display { border-color: #5c553f; background: #383529; }
 		:root[data-theme="dark"] .coin-value { color: #e1c47f; }
 		:root[data-theme="dark"] .add-coin-button { border-color: #746543; color: #f0dfb6; background: #51472f; }
-		:root[data-theme="dark"] .daily-bonus-button { border-color: #746543; color: #f0dfb6; background: #4a4431; }
+		:root[data-theme="dark"] .daily-bonus-button { border-color: #8b7a4a; color: #f0dfb6; background: #4a4431; }
 		:root[data-theme="dark"] .community-button:not(.instagram-button) { border-color: #6b6250; color: #ead9b5; background: #353126; }
 		:root[data-theme="dark"] .community-button.instagram-button { border-color: #59645b; color: #e7ece6; background: #222b27; }
 		:root[data-theme="dark"] .auth-panel, :root[data-theme="dark"] .bag-panel, :root[data-theme="dark"] .reward-panel { border-color: #4a574d; color: var(--ink); background: #222b27; }
@@ -622,11 +608,6 @@
 			</div>
 		</div>
 		<section class="machine-wrap" aria-label="3D 인형뽑기 기계">
-			<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6873890251417614" crossorigin="anonymous"></script>
-			<ins class="adsbygoogle" style="display:block;margin-bottom:12px;" data-ad-client="ca-pub-6873890251417614" data-ad-slot="1234567890" data-ad-format="auto" data-full-width-responsive="true"></ins>
-			<script>
-				(adsbygoogle = window.adsbygoogle || []).push({});
-			</script>
 			<canvas id="game" width="960" height="570" aria-label="드래그해 인형뽑기 기계 시점을 돌리고, 확대 축소 버튼으로 화면 크기를 조절하세요"></canvas>
 			<a class="ad-inquiry-accessible-link" href="https://www.instagram.com/9sept10th/" target="_blank" rel="noopener noreferrer">인형뽑기 뒤쪽 판의 광고 제휴 문의 (Instagram 새 탭)</a>
 			<div class="stage-label">CLAW MACHINE</div>
@@ -634,11 +615,6 @@
 				<button class="zoom-button" id="zoomIn" type="button" aria-label="화면 확대" title="확대">+</button>
 				<button class="zoom-button" id="zoomOut" type="button" aria-label="화면 축소" title="축소">−</button>
 			</div>
-			<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6873890251417614" crossorigin="anonymous"></script>
-			<ins class="adsbygoogle" style="display:block;margin-top:12px;" data-ad-client="ca-pub-6873890251417614" data-ad-slot="0987654321" data-ad-format="auto" data-full-width-responsive="true"></ins>
-			<script>
-				(adsbygoogle = window.adsbygoogle || []).push({});
-			</script>
 		</section>
 		<footer class="controls">
 			<p class="hint" id="status" aria-live="polite"><strong>화면 드래그</strong>로 기계를 돌리고<br><strong>조이스틱</strong>으로 집게를 움직이세요</p>
@@ -712,62 +688,20 @@
 			<p class="site-information-kicker">PLUSH CLUB · ARCADE 01</p>
 			<h2 id="siteInformationTitle">말랑말랑 인형뽑기, 브라우저에서 즐기는 3D 아케이드</h2>
 			<p class="site-information-intro">집게의 좌우뿐 아니라 앞뒤 위치까지 맞춰 인형을 노려보세요. 동물 맵과 찢토피아에는 서로 다른 인형이 있고, 찢칠라는 집게가 가까이 오면 도망갑니다. 아래 안내에서 조작법, 코인 규칙, 계정별 보관 방식을 확인할 수 있습니다.</p>
-			
 			<div class="site-information-grid">
 				<article>
-					<h3>조작과 포획 방법</h3>
-					<p>마우스나 손가락으로 화면을 드래그해 기계 시점을 자유롭게 회전시킵니다. 화면 좌측 조이스틱 또는 키보드의 방향키, WASD로 집게를 앞뒤좌우로 이동하고, 스페이스바나 우측의 '인형 뽑기' 버튼으로 집게를 내려보내세요. 집게의 정확한 위치, 내려보내는 타이밍, 인형의 무게와 위치에 따라 포획 결과가 결정됩니다.</p>
+					<h3>조작과 포획</h3>
+					<p>마우스나 손가락으로 화면을 드래그해 기계를 돌립니다. 조이스틱 또는 방향키/WASD로 집게를 이동하고, 스페이스바나 인형 뽑기 버튼으로 내려보내세요. 집게의 위치와 인형의 무게에 따라 포획 결과가 달라집니다.</p>
 				</article>
 				<article>
-					<h3>코인 시스템과 게임 맵</h3>
-					<p>각 플레이마다 코인 1개를 소비합니다. 코인은 5분마다 자동으로 5개씩 회복되며, 최대 50개까지 보유 가능합니다. 추가로 일일 보너스 버튼을 통해 24시간마다 200코인을 한 번에 받을 수 있습니다. 기본 맵인 '동물 인형'은 자유롭게 플레이할 수 있습니다. 두 번째 맵인 '찢토피아'는 1,000코인을 지불해 처음 한 번만 입장권을 구매하면 이후 무료로 입장할 수 있습니다.</p>
+					<h3>코인과 맵</h3>
+					<p>한 번 플레이할 때 코인 1개를 사용합니다. 코인은 5분마다 5개씩 받을 수 있습니다. 찢토피아는 1,000코인으로 처음 입장권을 구매하면 이후 무료로 입장할 수 있습니다.</p>
 				</article>
 				<article>
-					<h3>계정, 가방, 상점 기능</h3>
-					<p>게스트 플레이로도 게임을 즐길 수 있지만, 계정에 로그인하면 획득한 인형을 나만의 가방에 영구 보관할 수 있습니다. 인형 상점에서는 다른 플레이어와 인형을 거래할 수 있으며, Supabase 계정으로 로그인한 경우에 모든 거래 기능이 활성화됩니다.</p>
-				</article>
-				<article>
-					<h3>게임 특징과 메커닉</h3>
-					<p>이 게임은 실제 오락실 집게기계의 물리를 충실히 재현한 3D 게임입니다. 마찬가지로 실제 기계처럼 집게의 힘이 완벽하지 않을 수 있고, 인형이 미끄러질 수 있습니다. 두 개의 맵에는 총 11가지 다양한 동물 인형이 있으며, 찢토피아 맵에는 특별한 NPC인 '찢칠라'가 있어 집게가 가까이 오면 도망갑니다.</p>
-				</article>
-				<article>
-					<h3>장치 호환성</h3>
-					<p>말랑말랑 인형뽑기는 모든 최신 웹 브라우저에서 작동하며, 데스크톱, 태블릿, 모바일 기기를 완벽히 지원합니다. 조이스틱이나 마우스, 손가락 터치 모두에 최적화되어 있으므로 편한 방식으로 플레이하실 수 있습니다.</p>
-				</article>
-				<article>
-					<h3>지원하는 언어</h3>
-					<p>현재 한국어(한글), English(영어), 日本語(일본어), 中文(중국어)를 완벽히 지원합니다. 웹사이트 우측 상단의 언어 선택 드롭다운에서 원하는 언어로 변경할 수 있습니다.</p>
+					<h3>가방과 상점</h3>
+					<p>로그인한 계정은 획득한 인형을 가방에 보관할 수 있습니다. 게스트 플레이의 인형은 계정 가방에 저장되지 않습니다. 인형 상점 거래는 Supabase 계정으로 로그인한 경우에 이용할 수 있습니다.</p>
 				</article>
 			</div>
-			
-			<section style="margin-top: 32px; padding-top: 24px; border-top: 2px solid #e0e0e0;">
-				<h3 style="margin-top: 0;">자주 묻는 질문 (FAQ)</h3>
-				<article style="margin-bottom: 16px;">
-					<h4>Q: 인형을 못 뽑으면 코인이 환불되나요?</h4>
-					<p style="margin-bottom: 0;">A: 아니요, 게임 특성상 실패해도 코인은 소비됩니다. 실제 오락실 기계와 동일한 방식입니다.</p>
-				</article>
-				<article style="margin-bottom: 16px;">
-					<h4>Q: 획득한 인형은 어디에 저장되나요?</h4>
-					<p style="margin-bottom: 0;">A: 계정에 로그인했을 경우, 서버에 저장되어 어느 기기에서나 접근할 수 있습니다. 게스트 플레이로 뽑은 인형은 해당 브라우저의 로컬 스토리지에만 저장됩니다.</p>
-				</article>
-				<article style="margin-bottom: 16px;">
-					<h4>Q: 다른 플레이어와 인형을 거래할 수 있나요?</h4>
-					<p style="margin-bottom: 0;">A: 네, 상점 기능에서 다른 사용자의 판매 인형을 구매하거나 자신의 인형을 판매할 수 있습니다.</p>
-				</article>
-				<article>
-					<h4>Q: 서비스에 대한 문의나 건의는 어떻게 하나요?</h4>
-					<p style="margin-bottom: 0;">A: 상단 메뉴의 Instagram 계정으로 직접 메시지를 보내주시면 빠르게 답변해드립니다.</p>
-				</article>
-			</section>
-			
-			<nav class="site-information-links" aria-label="사이트 안내" style="margin-top: 24px;">
-				<a href="https://youdomae-main.pages.dev/" target="_blank" rel="noopener noreferrer">익명 커뮤니티</a>
-				<a href="https://www.instagram.com/9sept10th/" target="_blank" rel="noopener noreferrer">Instagram 서비스 문의</a>
-				<a href="#privacy">개인정보처리방침</a>
-				<a href="#terms">이용약관</a>
-			</nav>
-		</div>
-	</section>
 			<nav class="site-information-links" aria-label="사이트 안내">
 				<a href="/guide">전체 이용 가이드</a>
 				<a href="/privacy">개인정보처리방침</a>
@@ -1011,67 +945,5 @@
 		})();
 	</script>
 	<script type="module" src="./game3d.js"></script>
-	
-	<!-- Privacy Policy and Terms Section -->
-	<section id="privacy" class="site-information" style="display: none; margin-top: 20px;">
-		<div class="site-information-inner">
-			<h2>개인정보처리방침</h2>
-			<article style="margin-bottom: 20px;">
-				<h3>1. 개인정보의 수집 항목</h3>
-				<p>말랑말랑 인형뽑기는 다음과 같은 개인정보를 수집합니다:</p>
-				<ul style="margin: 10px 0; padding-left: 20px; color: #66776d; font-size: 12px;">
-					<li>필수: 사용자 아이디, 비밀번호, 이메일 주소</li>
-					<li>선택: 프로필 정보</li>
-					<li>자동수집: 접속 로그, 쿠키, 기기 정보</li>
-				</ul>
-			</article>
-			<article style="margin-bottom: 20px;">
-				<h3>2. 개인정보의 이용목적</h3>
-				<p>수집된 개인정보는 다음 목적으로만 이용됩니다:</p>
-				<ul style="margin: 10px 0; padding-left: 20px; color: #66776d; font-size: 12px;">
-					<li>서비스 제공 및 관리</li>
-					<li>사용자 인증 및 계정 관리</li>
-					<li>게임 진행 상황 및 획득 인형 저장</li>
-					<li>서비스 개선 및 통계 분석</li>
-				</ul>
-			</article>
-			<article style="margin-bottom: 20px;">
-				<h3>3. 개인정보의 보관 및 삭제</h3>
-				<p>개인정보는 서비스 이용 기간 동안 보관되며, 계정 삭제 시 개인정보는 지체 없이 삭제됩니다. 다만 관계 법령에 따라 일정 기간 보관해야 할 정보는 별도로 관리됩니다.</p>
-			</article>
-			<article style="margin-bottom: 20px;">
-				<h3>4. 제3자에 대한 정보 공개</h3>
-				<p>개인정보는 사용자의 동의 없이 제3자에게 공개되지 않습니다. 다만 법령에 의해 강제되는 경우는 예외입니다.</p>
-			</article>
-			<article style="margin-bottom: 20px;">
-				<h3>5. 보안</h3>
-				<p>사용자의 개인정보 보호를 위해 안전한 통신 프로토콜(HTTPS)을 사용하며, 비밀번호는 암호화하여 저장됩니다.</p>
-			</article>
-		</div>
-	</section>
-	
-	<section id="terms" class="site-information" style="display: none; margin-top: 20px;">
-		<div class="site-information-inner">
-			<h2>이용약관</h2>
-			<article style="margin-bottom: 20px;">
-				<h3>1. 서비스 이용약관</h3>
-				<p>말랑말랑 인형뽑기를 이용하면서 본 약관에 동의하는 것으로 간주됩니다.</p>
-			</article>
-			<article style="margin-bottom: 20px;">
-				<h3>2. 사용자의 의무</h3>
-				<ul style="margin: 10px 0; padding-left: 20px; color: #66776d; font-size: 12px;">
-					<li>타인의 계정을 무단으로 사용해서는 안 됩니다.</li>
-					<li>부정행위나 해킹을 시도해서는 안 됩니다.</li>
-					<li>서비스 운영을 방해하는 행동을 해서는 안 됩니다.</li>
-				</ul>
-			</article>
-			<article style="margin-bottom: 20px;">
-				<h3>3. 서비스 제공자의 책임</h3>
-				<p>서비스 제공자는 서비스 이용 중 발생하는 손해에 대해 법령에서 정한 범위 내에서만 책임을 지며, 천재지변이나 불가항력적 사유로 인한 손해는 책임을 지지 않습니다.</p>
-			</article>
-			<article style="margin-bottom: 20px;">
-				<h3>4. 지적재산권</h3>
-				<p>게임 내 모든 콘텐츠(그래픽, 음성, 텍스트 등)의 저작권은 PLUSH CLUB에 귀속됩니다.</p>
-			</article>
-		</div>
-	</section>
+</body>
+</html>

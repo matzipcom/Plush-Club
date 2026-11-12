@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://plush-club.pages.dev/sitemap.xml

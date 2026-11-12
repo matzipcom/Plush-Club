@@ -453,3 +453,51 @@ revoke all on function public.cancel_market_listing(uuid) from public;
 grant execute on function public.create_market_listing(uuid, integer) to authenticated;
 grant execute on function public.buy_market_listing(uuid) to authenticated;
 grant execute on function public.cancel_market_listing(uuid) to authenticated;
+
+create or replace function public.claim_daily_bonus()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_profile public.profiles%rowtype;
+begin
+  if v_user_id is null then
+    raise exception 'Authentication required';
+  end if;
+
+  select * into v_profile
+  from public.profiles
+  where id = v_user_id
+  for update;
+  if not found then
+    raise exception 'Profile not found';
+  end if;
+
+  if v_profile.next_daily_bonus_at is not null and v_profile.next_daily_bonus_at > now() then
+    return jsonb_build_object(
+      'ok', false,
+      'coins', v_profile.coins,
+      'next_daily_bonus_at', v_profile.next_daily_bonus_at
+    );
+  end if;
+
+  update public.profiles
+  set coins = coins + 200,
+      next_daily_bonus_at = now() + interval '24 hours',
+      updated_at = now()
+  where id = v_user_id
+  returning * into v_profile;
+
+  return jsonb_build_object(
+    'ok', true,
+    'coins', v_profile.coins,
+    'next_daily_bonus_at', v_profile.next_daily_bonus_at
+  );
+end;
+$$;
+
+revoke all on function public.claim_daily_bonus() from public;
+grant execute on function public.claim_daily_bonus() to authenticated;

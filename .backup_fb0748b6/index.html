@@ -1,0 +1,1077 @@
+<!doctype html>
+<html lang="ko">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#f2f1e9">
+	<meta name="description" content="말랑말랑 인형뽑기는 브라우저에서 직접 조이스틱과 마우스로 집게를 조작하는 무료 3D 온라인 인형뽑기 게임입니다. 실제 오락실 기계의 물리를 충실히 재현했으며, 두 가지 맵(동물 인형, 찢토피아)에서 다양한 인형을 뽑아보세요. 계정 로그인 시 뽑은 인형을 보관하고 다른 사용자와 거래할 수 있습니다.">
+	<meta name="keywords" content="인형뽑기, 클로우머신, 온라인 게임, 3D 게임, 아케이드, 웹 게임, 무료 게임">
+	<meta name="author" content="PLUSH CLUB">
+	<meta property="og:title" content="말랑말랑 인형뽑기 - 브라우저 3D 아케이드 게임">
+	<meta property="og:description" content="실제 오락실처럼 즐기는 3D 집게기계 게임. 마우스나 손가락으로 집게를 조작해 인형을 뽑아보세요!">
+	<meta property="og:type" content="website">
+	<meta property="og:url" content="https://plush-club.pages.dev/">
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:title" content="말랑말랑 인형뽑기">
+	<meta name="twitter:description" content="브라우저에서 즐기는 무료 3D 인형뽑기 게임">
+	<meta name="google-adsense-account" content="ca-pub-6873890251417614">
+	<title>말랑말랑 인형뽑기 - 무료 온라인 3D 클로우머신 게임</title>
+	<link rel="canonical" href="https://plush-club.pages.dev/">
+	<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6873890251417614" crossorigin="anonymous"></script>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+	<style>
+		:root {
+			color-scheme: light;
+			--ink: #173a37;
+			--muted: #74817b;
+			--paper: #fffaf0;
+			--coral: #ed7863;
+			--yellow: #f3cb68;
+		}
+		* { box-sizing: border-box; }
+		body {
+			min-width: 320px;
+			min-height: 100vh;
+			margin: 0;
+			display: grid;
+			place-items: center;
+			padding: 28px 18px;
+			color: var(--ink);
+			background-color: #e8f1df;
+			background-image: radial-gradient(#c9d9c4 1px, transparent 1px);
+			background-size: 19px 19px;
+			font-family: "Trebuchet MS", "Malgun Gothic", sans-serif;
+		}
+		.arcade {
+			width: min(100%, 900px);
+			overflow: hidden;
+			border: 4px solid var(--ink);
+			border-radius: 22px;
+			background: var(--paper);
+			background-color: #fffaf0;
+			box-shadow: 0 12px 0 #b6c8b3, 0 22px 40px #183c3920;
+		}
+		.topbar {
+			min-height: 84px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+			padding: 16px 24px;
+			border-bottom: 3px solid var(--ink);
+			background: #fffef9;
+		}
+		.brand { display: flex; align-items: center; gap: 13px; }
+		.brand-mark {
+			width: 43px;
+			height: 43px;
+			display: grid;
+			place-items: center;
+			border: 2px solid var(--ink);
+			border-radius: 14px;
+			background: var(--yellow);
+			font-size: 25px;
+		}
+		h1 {
+			margin: 0;
+			font-family: Georgia, "Malgun Gothic", serif;
+			font-size: 23px;
+			line-height: 1.1;
+		}
+		.subtitle { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+		.score-box {
+			min-width: 104px;
+			padding: 8px 14px;
+			border: 2px solid var(--ink);
+			border-radius: 12px;
+			background: #e6f4e7;
+			text-align: center;
+		}
+		.score-label { display: block; color: var(--muted); font-size: 10px; font-weight: 800; }
+		.score-value { display: block; margin-top: 2px; font-size: 20px; font-weight: 900; }
+		.machine-wrap { padding: 18px 20px 10px; }
+		canvas {
+			width: 100%;
+			height: auto;
+			display: block;
+			border: 3px solid var(--ink);
+			border-radius: 14px;
+			background: #d6f1df;
+			touch-action: manipulation;
+		}
+		.controls {
+			min-height: 94px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 18px;
+			padding: 13px 22px 19px;
+		}
+		.hint { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+		.hint strong { color: var(--ink); }
+		.button-group { display: flex; align-items: center; gap: 9px; }
+		button {
+			min-width: 54px;
+			height: 48px;
+			border: 2px solid var(--ink);
+			border-radius: 13px;
+			color: var(--ink);
+			background: #fffef9;
+			box-shadow: 0 4px 0 var(--ink);
+			font: inherit;
+			font-size: 20px;
+			font-weight: 900;
+			cursor: pointer;
+			touch-action: manipulation;
+			transition: transform 90ms ease, box-shadow 90ms ease, background 90ms ease;
+		}
+		button:hover { background: #eaf5e9; }
+		button:active, button.pressed { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+		button:focus-visible { outline: 3px solid var(--coral); outline-offset: 3px; }
+		.drop-button {
+			min-width: 130px;
+			padding: 0 16px;
+			color: #fffdf6;
+			background: var(--coral);
+			font-size: 14px;
+		}
+		.drop-button:hover { background: #df6855; }
+		.drop-button:disabled { opacity: 0.52; cursor: not-allowed; }
+		@media (max-width: 580px) {
+			body { padding: 14px 10px 24px; }
+			.arcade { border-width: 3px; border-radius: 17px; }
+			.topbar { min-height: 72px; padding: 12px 14px; }
+			.brand-mark { width: 38px; height: 38px; }
+			.subtitle { font-size: 10px; }
+			.score-box { min-width: 78px; padding: 6px 9px; }
+			.score-value { font-size: 19px; }
+			.machine-wrap { padding: 12px 10px 4px; }
+			.controls { align-items: flex-end; gap: 8px; padding: 10px 12px 16px; }
+			.hint { max-width: 112px; font-size: 10px; }
+			.button-group { gap: 6px; }
+			button { min-width: 44px; height: 44px; border-radius: 11px; }
+			.drop-button { min-width: 92px; padding: 0 9px; font-size: 12px; }
+		}
+		@media (prefers-reduced-motion: reduce) {
+			*, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+		}
+		body { display: block; min-height: 100vh; padding: 0; background: #f7f6ef; }
+		.arcade { width: 100%; max-width: none; overflow: visible; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+		.topbar { min-height: 94px; max-width: 1440px; margin: auto; padding: 17px clamp(18px, 4vw, 58px); border: 0; background: transparent; }
+		.brand { gap: 13px; }
+		.brand-mark { width: 46px; height: 46px; border: 0; border-radius: 15px; color: #fff9e9; background: var(--ink); font: 700 16px Georgia, serif; }
+		h1 { font: 700 23px/1.1 Georgia, "Malgun Gothic", serif; }
+		.subtitle { margin-top: 5px; color: #638174; font-size: 9px; font-weight: 900; letter-spacing: 0; }
+		.score-box { min-width: 0; padding: 0; border: 0; background: transparent; text-align: left; }
+		.score-label { font-size: 10px; }
+		.score-value { margin-top: 2px; font-size: 20px; }
+		.machine-toolbar { max-width: 1440px; min-height: 58px; margin: auto; padding: 10px clamp(18px, 4vw, 58px); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+		.machine-wrap { position: relative; width: 100%; height: min(68svh, 720px); min-height: 420px; padding: 0; overflow: hidden; background: #dcebe0; }
+		canvas { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; border-radius: 0; background: transparent; touch-action: none; cursor: grab; }
+		canvas.dragging-view { cursor: grabbing; }
+		.ad-inquiry-accessible-link { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+		.ad-inquiry-accessible-link:focus-visible { z-index: 4; top: 12px; left: 50%; width: auto; height: auto; padding: 9px 12px; transform: translateX(-50%); border: 1px solid #c8a561; border-radius: 7px; color: #193c37; background: #fffaf0; clip-path: none; }
+		.controls { min-height: 110px; max-width: 1440px; margin: auto; padding: 18px clamp(18px, 4vw, 58px) 24px; }
+		.hint { min-width: 220px; font-size: 12px; }
+		.button-group { gap: 10px; }
+		.zoom-controls { position: absolute; z-index: 2; right: clamp(18px, 4vw, 58px); bottom: 18px; display: grid; gap: 7px; }
+		.zoom-button { width: 44px; min-width: 44px; height: 44px; padding: 0; border: 1px solid #cbd4c8; border-radius: 12px; color: var(--ink); background: #f7f6efed; font-size: 24px; line-height: 1; }
+		.joystick { position: relative; width: 104px; height: 104px; flex: 0 0 104px; display: grid; place-items: center; border: 2px solid #cbd4c8; border-radius: 50%; background: radial-gradient(circle, #f8f8f1 0 24%, #e8eee6 25% 63%, #d7e0d6 64% 100%); box-shadow: inset 0 2px 7px #193c3722; touch-action: none; user-select: none; cursor: grab; }
+		.joystick::before { position: absolute; width: 66%; height: 66%; border: 1px dashed #82948788; border-radius: 50%; content: ""; pointer-events: none; }
+		.joystick.active { cursor: grabbing; }
+		.joystick-knob { position: absolute; z-index: 1; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px; border: 1px solid #806944; border-radius: 50%; background: linear-gradient(145deg, #f4e3b8, #b99559); box-shadow: 0 3px 7px #193c373b, inset 0 1px 2px #fff8; transition: transform 45ms linear; pointer-events: none; }
+		button { min-width: 50px; border: 1px solid #d4dacf; border-radius: 14px; background: #fffef9; box-shadow: none; transition: transform .12s ease, background .12s ease, border-color .12s ease; }
+		button:hover { border-color: #9fb6a5; background: #edf4eb; }
+		button:active, button.pressed { transform: translateY(2px); box-shadow: none; }
+		.drop-button { min-width: 144px; margin-left: 4px; border-color: var(--ink); color: #fffaf0; background: var(--ink); font-size: 13px; }
+		.drop-button:hover { border-color: #28564d; background: #28564d; }
+		.reset-button { width: 48px; min-width: 48px; }
+		.stage-label { position: absolute; z-index: 1; top: 22px; left: clamp(18px, 4vw, 58px); display: flex; align-items: center; gap: 8px; color: #476b5d; font-size: 10px; font-weight: 900; letter-spacing: 0; pointer-events: none; }
+		.map-switch { display: flex; flex: 0 1 auto; gap: 3px; padding: 4px; border: 1px solid #c8a56199; border-radius: 9px; background: #193c34e8; box-shadow: 0 5px 16px #142d2430; }
+		.map-tab { min-width: 120px; height: 34px; padding: 0 12px; border: 1px solid transparent; border-radius: 6px; color: #e7e8df; background: transparent; box-shadow: none; font-size: 11px; font-weight: 600; }
+		.map-tab#mapPolitics { min-width: 154px; }
+		.map-tab:hover { border-color: #ffffff30; color: #fffaf0; background: #ffffff12; }
+		.map-tab[aria-pressed="true"] { border-color: #c8a561; color: #193c34; background: #e7d4a9; font-weight: 700; }
+		.restock-status { position: static; display: flex; align-items: center; gap: 8px; min-width: 134px; padding: 8px 11px; border: 1px solid #ccd9cb; border-radius: 10px; color: var(--ink); background: #f7f6efeb; pointer-events: none; }
+		.restock-label { color: #718178; font-size: 9px; font-weight: 800; }
+		.restock-value { font-size: 11px; font-weight: 900; }
+		.keycap { margin-left: 8px; padding: 3px 6px; border: 1px solid #ffffff50; border-radius: 5px; font-size: 9px; }
+		@media (max-width: 600px) {
+			.topbar { min-height: 76px; padding: 12px 18px; flex-wrap: wrap; }
+			.account-tools { flex: 1 1 100%; justify-content: flex-end; }
+			.brand-mark { width: 39px; height: 39px; border-radius: 13px; font-size: 14px; }
+			h1 { font-size: 19px; }
+			.score-value { font-size: 17px; }
+			.machine-toolbar { min-height: 0; justify-content: center; flex-wrap: wrap; padding: 10px 12px; gap: 8px; }
+			.machine-wrap { height: 57svh; min-height: 360px; max-height: 560px; }
+			.stage-label { top: 16px; }
+			.map-switch { flex: 1 1 100%; justify-content: center; }
+			.map-tab { flex: 1 1 0; min-width: 0; padding: 0 7px; }
+			.restock-status { min-width: 120px; padding: 6px 9px; }
+			.controls { min-height: 96px; padding: 13px 12px 16px; gap: 10px; }
+			.hint { min-width: 0; max-width: 120px; font-size: 10px; }
+			.button-group { gap: 6px; }
+			.zoom-controls { right: 12px; bottom: 12px; gap: 5px; }
+			.zoom-button { width: 40px; min-width: 40px; height: 40px; }
+			.joystick { width: 82px; height: 82px; flex-basis: 82px; }
+			.joystick-knob { width: 34px; height: 34px; margin: -17px; }
+			button { min-width: 42px; height: 43px; padding: 0 8px; border-radius: 12px; }
+			.drop-button { min-width: 105px; margin-left: 1px; font-size: 11px; }
+			.reset-button { width: 42px; min-width: 42px; }
+			.keycap { display: none; }
+		}
+		@media (max-width: 390px) {
+			.hint { max-width: 88px; }
+			.button-group { gap: 4px; }
+			.joystick { width: 72px; height: 72px; flex-basis: 72px; }
+			.joystick-knob { width: 32px; height: 32px; margin: -16px; }
+			button { min-width: 38px; }
+			.reset-button { width: 38px; min-width: 38px; }
+			.drop-button { min-width: 84px; }
+			.reset-button { width: 34px; min-width: 34px; }
+			.hint { max-width: 62px; font-size: 9px; }
+		}
+		[hidden] { display: none !important; }
+		.account-tools { display: flex; align-items: center; gap: 9px; }
+		.guest-tools { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; }
+		.account-name { max-width: 120px; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+		.coin-display { display: flex; align-items: center; gap: 7px; padding: 5px 8px; border: 1px solid #e4d8b8; border-radius: 10px; background: #fff9e8; }
+		.coin-value { min-width: 18px; color: #966c21; font-size: 14px; font-weight: 900; text-align: right; }
+		.small-button { min-width: 0; height: 32px; padding: 0 9px; border: 1px solid #d5dacd; border-radius: 9px; color: var(--ink); background: #fffef9; box-shadow: none; font-size: 11px; }
+		.small-button:hover { background: #edf4eb; }
+		.add-coin-button { border-color: #e9bd64; background: #f7e7b9; font-weight: 900; }
+		.daily-bonus-button { border-color: #c8a561; background: #f4d692; font-weight: 700; color: #3a2f1a; }
+		.bag-button { position: relative; min-width: 72px; height: 40px; padding: 0 10px; border: 1px solid #cbd9ce; border-radius: 11px; background: #edf4eb; box-shadow: none; font-size: 12px; }
+		.bag-count { margin-left: 4px; color: #638174; font-size: 11px; }
+		.auth-gate, .bag-gate { position: fixed; inset: 0; z-index: 20; }
+		.auth-gate { display: grid; place-items: center; padding: 18px; background: #193c37d9; backdrop-filter: blur(7px); }
+		.auth-panel { width: min(100%, 410px); padding: 30px; border: 1px solid #d8ddcf; border-radius: 18px; background: #fffaf0; box-shadow: 0 24px 80px #102a2780; }
+		.auth-kicker { color: #638174; font-size: 10px; font-weight: 900; }
+		.auth-panel h2 { margin: 8px 0 5px; font: 700 27px/1.15 Georgia, "Malgun Gothic", serif; }
+		.auth-intro { margin: 0 0 20px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+		.auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 17px; padding: 4px; border-radius: 11px; background: #e8eee4; }
+		.auth-tab { min-width: 0; height: 37px; border: 0; border-radius: 8px; background: transparent; box-shadow: none; font-size: 12px; }
+		.auth-tab[aria-selected="true"] { background: #fffef9; box-shadow: 0 1px 5px #193c3717; }
+		.auth-form { display: grid; gap: 12px; }
+		.auth-field { display: grid; gap: 6px; color: #52665c; font-size: 11px; font-weight: 800; }
+		.auth-field input { width: 100%; height: 43px; padding: 0 12px; border: 1px solid #d2dacf; border-radius: 10px; color: var(--ink); background: #fffef9; font: inherit; font-size: 14px; }
+		.auth-field input:focus { outline: 2px solid #7fa38e; outline-offset: 1px; }
+		.auth-error { min-height: 18px; margin: 0; color: #b94d40; font-size: 11px; }
+		.auth-submit { width: 100%; height: 45px; border-color: var(--ink); color: #fffaf0; background: var(--ink); box-shadow: none; font-size: 13px; }
+		.auth-submit:hover { background: #28564d; }
+		.auth-note { margin: 14px 0 0; color: #879087; font-size: 10px; line-height: 1.5; }
+		.bag-gate { display: grid; justify-items: end; background: #193c3766; }
+		.bag-backdrop { position: absolute; inset: 0; width: 100%; min-width: 0; height: 100%; border: 0; border-radius: 0; background: transparent; }
+		.bag-panel { position: relative; width: min(100%, 400px); height: 100%; overflow-y: auto; padding: 26px 22px; background: #fffaf0; box-shadow: -16px 0 48px #102a2730; }
+		.bag-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+		.bag-heading-actions { display: flex; align-items: center; gap: 6px; }
+		.bag-heading h2 { margin: 0; font: 700 25px/1.2 Georgia, "Malgun Gothic", serif; }
+		.bag-summary { margin: 7px 0 20px; color: var(--muted); font-size: 11px; }
+		.bag-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+		.bag-item, .bag-empty { display: flex; align-items: center; gap: 11px; min-height: 56px; padding: 10px 12px; border: 1px solid #e0e4d9; border-radius: 11px; background: #fffef9; }
+		.bag-item-row { min-width: 0; }
+		.bag-item-button { width: auto; min-width: 0; min-height: 54px; flex: 1; display: flex; align-items: center; gap: 11px; padding: 9px 11px; border: 1px solid #e0e4d9; border-radius: 11px; background: #fffef9; box-shadow: none; text-align: left; }
+		.bag-item-button:hover { border-color: #9fb6a5; background: #edf4eb; }
+		.bag-swatch { width: 26px; height: 26px; flex: 0 0 auto; border: 2px solid #193c3722; border-radius: 50%; }
+		.bag-item-name { color: var(--ink); font-size: 12px; font-weight: 800; }
+		.bag-item-date { margin-left: auto; color: #879087; font-size: 10px; }
+		.bag-empty { justify-content: center; color: var(--muted); font-size: 12px; }
+		.shop-section { margin: 0 0 22px; }
+		.shop-section-title { margin: 0 0 9px; color: var(--ink); font-size: 12px; font-weight: 900; }
+		.shop-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+		.shop-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 10px; border: 1px solid #e0e4d9; border-radius: 11px; background: #fffef9; }
+		.shop-item-info { min-width: 0; display: flex; align-items: center; gap: 9px; }
+		.shop-item-copy { min-width: 0; display: grid; gap: 3px; }
+		.shop-item-name { overflow: hidden; color: var(--ink); font-size: 11px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+		.shop-item-meta { color: #78827b; font-size: 10px; }
+		.shop-price { color: #966c21; font-size: 11px; font-weight: 900; white-space: nowrap; }
+		.shop-buy-button, .shop-sell-button { min-width: 68px; height: 34px; padding: 0 9px; border: 1px solid var(--ink); border-radius: 9px; color: #fffaf0; background: var(--ink); box-shadow: none; font-size: 11px; }
+		.shop-buy-button:hover, .shop-sell-button:hover { background: #28564d; }
+		.shop-buy-button:disabled, .shop-sell-button:disabled { opacity: .48; }
+		.shop-price-input { width: 76px; height: 34px; padding: 0 7px; border: 1px solid #d5dacd; border-radius: 8px; color: var(--ink); background: #fffef9; font: inherit; font-size: 11px; }
+		.shop-sell-controls { display: flex; align-items: center; gap: 5px; }
+		.shop-status { min-height: 18px; margin: 0 0 10px; color: #718178; font-size: 10px; line-height: 1.5; }
+		.shop-section { margin: 0 0 22px; }
+		.shop-section-title { margin: 0 0 9px; color: var(--ink); font-size: 12px; font-weight: 900; }
+		.shop-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+		.shop-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 10px; border: 1px solid #e0e4d9; border-radius: 11px; background: #fffef9; }
+		.shop-item-info { min-width: 0; display: flex; align-items: center; gap: 9px; }
+		.shop-item-copy { min-width: 0; display: grid; gap: 3px; }
+		.shop-item-name { overflow: hidden; color: var(--ink); font-size: 11px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+		.shop-item-meta { color: #78827b; font-size: 10px; }
+		.shop-buy-button, .shop-sell-button { min-width: 68px; height: 34px; padding: 0 9px; border: 1px solid var(--ink); border-radius: 9px; color: #fffaf0; background: var(--ink); box-shadow: none; font-size: 11px; }
+		.shop-buy-button:hover, .shop-sell-button:hover { background: #28564d; }
+		.shop-buy-button:disabled, .shop-sell-button:disabled { opacity: .48; }
+		.shop-price-input { width: 76px; height: 34px; padding: 0 7px; border: 1px solid #d5dacd; border-radius: 8px; color: var(--ink); background: #fffef9; font: inherit; font-size: 11px; }
+		.shop-sell-controls { display: flex; align-items: center; gap: 5px; }
+		.shop-status { min-height: 18px; margin: 0 0 10px; color: #718178; font-size: 10px; line-height: 1.5; }
+		.reward-gate { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 18px; background: #193c37cc; backdrop-filter: blur(8px); }
+		.reward-panel { position: relative; width: min(100%, 390px); overflow: hidden; padding: 25px 24px 23px; border: 1px solid #e8dfc7; border-radius: 20px; background: #fffaf0; box-shadow: 0 24px 90px #102a2780; text-align: center; animation: reward-enter .38s cubic-bezier(.2,.8,.2,1) both; }
+		.reward-fireworks { position: absolute; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
+		.reward-firework { position: absolute; left: var(--origin-x); top: var(--origin-y); opacity: 0; font-size: var(--size); line-height: 1; filter: drop-shadow(0 2px 3px #193c3730); animation: reward-firework-burst 1.15s cubic-bezier(.12,.65,.25,1) var(--delay) both; }
+		.reward-kicker { color: #638174; font-size: 9px; font-weight: 900; }
+		.reward-panel h2 { margin: 8px 0 4px; color: var(--ink); font: 700 25px/1.2 Georgia, "Malgun Gothic", serif; }
+		.reward-copy { margin: 0; color: var(--muted); font-size: 11px; }
+		.reward-art { position: relative; width: min(100%, 260px); aspect-ratio: 1; margin: 14px auto 10px; overflow: hidden; border: 1px solid #e4e6d9; border-radius: 16px; background: radial-gradient(circle at 50% 42%, #fffef7 0 28%, #e8f1df 78%); }
+		.reward-art canvas { position: relative; inset: auto; width: 100%; height: 100%; display: block; border: 0; border-radius: 0; background: transparent; touch-action: none; cursor: grab; }
+		.reward-art canvas.dragging { cursor: grabbing; }
+		.reward-rotate-hint { position: absolute; right: 11px; bottom: 10px; padding: 5px 8px; border: 1px solid #d5dacd; border-radius: 8px; color: var(--ink); background: #fffaf0dd; font-size: 10px; font-weight: 900; pointer-events: none; }
+		.reward-sparkle { position: absolute; inset: 12px; border: 1px dashed #d5bd79; border-radius: 50%; pointer-events: none; animation: sparkle-turn 18s linear infinite; }
+		.reward-name { margin: 0 0 15px; color: var(--ink); font-size: 13px; font-weight: 900; }
+		.reward-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+		.reward-action { min-width: 0; height: 43px; border: 1px solid var(--ink); border-radius: 11px; color: #fffaf0; background: var(--ink); box-shadow: none; font-size: 12px; }
+		.reward-action:hover { background: #28564d; }
+		.reward-action.secondary { color: var(--ink); background: #fffef9; border-color: #d3dbcf; }
+		.reward-action.secondary:hover { background: #edf4eb; }
+		@keyframes reward-enter { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+		@keyframes sparkle-turn { to { transform: rotate(360deg); } }
+		@keyframes reward-firework-burst { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.25); } 14% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.6) rotate(var(--turn)); } }
+		@media (prefers-reduced-motion: reduce) { .reward-panel, .reward-sparkle, .reward-firework { animation: none; } .reward-firework { opacity: 1; transform: translate(-50%, -50%); } }
+		@media (max-width: 600px) {
+			.account-tools { gap: 5px; }
+			.guest-tools { flex: 1 1 100%; justify-content: flex-end; gap: 5px; font-size: 10px; }
+			.account-name { display: none; }
+			.coin-display { gap: 4px; padding: 4px; }
+			.small-button { height: 30px; padding: 0 7px; }
+			.bag-button { min-width: 60px; height: 36px; padding: 0 7px; font-size: 11px; }
+			.auth-panel { padding: 24px 20px; }
+			.auth-panel h2 { font-size: 24px; }
+			.bag-panel { padding: 21px 16px; }
+		}
+		:root {
+			--ink: #193c34;
+			--muted: #737b71;
+			--paper: #f5f3ec;
+			--coral: #b9765e;
+			--yellow: #c8a561;
+			--brass: #a8874f;
+			--line: #d7d9cf;
+			--surface: #fbfaf6;
+		}
+		body {
+			color: var(--ink);
+			background: linear-gradient(145deg, #f3f2eb 0%, #e8ebe3 52%, #eee9df 100%);
+			font-family: "DM Sans", "Gowun Batang", sans-serif;
+		}
+		.topbar {
+			min-height: 88px;
+			border-bottom: 1px solid #cdd3c8;
+			background: #f6f5efe8;
+			backdrop-filter: blur(12px);
+		}
+		.brand-mark {
+			border: 1px solid #c8a561;
+			border-radius: 12px;
+			color: #f6f1e5;
+			background: #193c34;
+			box-shadow: inset 0 0 0 3px #ffffff10;
+			font-family: "DM Sans", sans-serif;
+		}
+		h1 { font-family: "Gowun Batang", Georgia, serif; font-weight: 700; }
+		.subtitle { color: #94774a; font-family: "DM Sans", sans-serif; font-size: 9px; font-weight: 700; }
+		.score-box { padding-left: 18px; border-left: 1px solid #cdd3c8; }
+		.score-label { color: #737b71; font-size: 9px; font-weight: 600; }
+		.score-value { color: #193c34; font-family: "DM Sans", sans-serif; font-variant-numeric: tabular-nums; }
+		.machine-wrap {
+			border-top: 1px solid #c8a56188;
+			border-bottom: 1px solid #c8a56188;
+			background: #d8e2d9;
+		}
+		.stage-label {
+			padding: 8px 11px;
+			border: 1px solid #ffffff80;
+			border-radius: 7px;
+			color: #f7f3e8;
+			background: #193c34e8;
+			box-shadow: 0 5px 16px #142d2430;
+			font-family: "DM Sans", sans-serif;
+		}
+		.restock-status {
+			border-color: #c8a561aa;
+			border-radius: 8px;
+			color: #faf6ea;
+			background: #193c34e8;
+			box-shadow: 0 5px 16px #142d2430;
+		}
+		.restock-label { color: #d8bd83; }
+		.restock-value { font-family: "DM Sans", sans-serif; font-variant-numeric: tabular-nums; }
+		.controls { border-top: 1px solid #d7d9cf; }
+		.hint { color: #6d756d; }
+		.hint strong { color: #193c34; font-weight: 700; }
+		.button-group { align-items: center; }
+		button {
+			border-color: #cbd1c7;
+			border-radius: 10px;
+			color: #193c34;
+			background: #fbfaf6;
+			font-family: "DM Sans", "Gowun Batang", sans-serif;
+			font-weight: 600;
+		}
+		button:hover { border-color: #a58a58; background: #f1eee4; }
+		button:focus-visible { outline-color: #b9765e; }
+		.drop-button {
+			border-color: #8e7040;
+			color: #fffaf0;
+			background: #9c7945;
+			box-shadow: inset 0 1px 0 #ffffff35, 0 3px 8px #70552a30;
+			font-family: "Gowun Batang", Georgia, serif;
+			font-weight: 700;
+		}
+		.drop-button:hover { border-color: #795c31; background: #86683a; }
+		.account-tools, .guest-tools { gap: 8px; }
+		.coin-display { border-color: #d7c79f; border-radius: 8px; background: #f2ecdc; }
+		.coin-value { color: #886b35; font-variant-numeric: tabular-nums; }
+		.add-coin-button { border-color: #c8a561; color: #5e4b2a; background: #e8d9b5; }
+		.daily-bonus-button { border-color: #c8a561; color: #5e4b2a; background: #f4d692; }
+		.bag-button { border-color: #c8d0c7; border-radius: 9px; color: #314b40; background: #e9eee7; }
+		.auth-panel, .bag-panel, .reward-panel {
+			border-color: #d4c8aa;
+			background: #f7f5ee;
+			box-shadow: 0 24px 80px #102a2750;
+		}
+		.auth-panel h2, .bag-heading h2, .reward-panel h2 { font-family: "Gowun Batang", Georgia, serif; }
+		.auth-tabs { background: #e7e9e1; }
+		.auth-tab[aria-selected="true"] { color: #193c34; }
+		.auth-field input { border-color: #cbd1c7; background: #fcfbf7; }
+		.auth-submit { border-color: #193c34; background: #193c34; }
+		.auth-submit:hover { background: #28564d; }
+		.bag-item, .bag-item-button, .bag-empty, .shop-card { border-color: #d8d9d0; border-radius: 8px; background: #fcfbf7; }
+		.bag-item-button:hover { border-color: #a58a58; background: #f1eee4; }
+		.combine-button { border-color: #d2d3c9; border-radius: 8px; background: #fcfbf7; }
+		.shop-buy-button, .shop-sell-button { border-color: #193c34; border-radius: 8px; background: #193c34; }
+		.shop-buy-button:hover, .shop-sell-button:hover { background: #28564d; }
+		.reward-gate { background: #142b25d9; }
+		.reward-panel { border-radius: 14px; }
+		.reward-art { border-color: #d4c8aa; border-radius: 10px; background: #e5ebe2; }
+		.reward-action { border-radius: 9px; background: #193c34; }
+		.reward-action:hover { background: #28564d; }
+		.reward-action.secondary { border-color: #cbd1c7; color: #193c34; background: #fcfbf7; }
+		@media (max-width: 600px) {
+			.topbar { min-height: 78px; }
+			.score-box { padding-left: 10px; }
+			.account-tools, .guest-tools { flex-wrap: wrap; }
+			.machine-wrap { border-top-width: 1px; border-bottom-width: 1px; }
+			.controls { border-top: 0; }
+			.map-tab { min-width: 0; flex: 1; padding: 0 7px; font-size: 10px; }
+		}
+		.hint.hint-coin-alert {
+			position: fixed;
+			z-index: 15;
+			top: clamp(116px, 16vh, 150px);
+			left: 50%;
+			width: min(520px, calc(100vw - 32px));
+			max-width: none;
+			min-width: 0;
+			padding: 14px 20px;
+			transform: translateX(-50%);
+			border: 1px solid #d5bd8d;
+			border-left: 5px solid #a34f3c;
+			border-radius: 9px;
+			color: #6f3028;
+			background: #fff8e9;
+			box-shadow: 0 12px 30px #23362d30;
+			font-family: "Gowun Batang", Georgia, serif;
+			font-size: 16px;
+			font-weight: 700;
+			line-height: 1.55;
+			text-align: center;
+			animation: coin-alert-enter .24s ease-out both;
+		}
+		@keyframes coin-alert-enter { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+		@media (max-width: 600px) {
+			.hint.hint-coin-alert { top: 126px; padding: 11px 14px; font-size: 15px; }
+		}
+		@media (prefers-reduced-motion: reduce) { .hint.hint-coin-alert { animation: none; } }
+		.community-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 112px; height: 38px; padding: 0 11px; border: 1px solid #a8874f; border-radius: 9px; color: #69522d; background: #eee3ca; font-size: 11px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+		.community-button:hover { border-color: #896b39; color: #4d3c21; background: #e6d6b3; }
+		.community-button.instagram-button { min-width: 0; height: 38px; padding: 0 10px; border-color: var(--line); border-radius: 12px; color: var(--ink); background: var(--paper); font-weight: 750; }
+		.community-button.instagram-button:hover { border-color: #d76a9b; color: #c13584; background: var(--paper); box-shadow: 0 0 16px #c1358421; }
+		@media (max-width: 600px) { .community-button { min-width: 0; height: 32px; padding: 0 8px; font-size: 10px; } }
+		.theme-toggle { width: 36px; min-width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border-radius: 50%; font-size: 16px; }
+		.language-control { display: flex; align-items: center; gap: 5px; }
+		.language-icon { font-size: 16px; line-height: 1; }
+		.language-select { width: 112px; height: 36px; padding: 0 9px; border: 1px solid #d4dacf; border-radius: 9px; color: var(--ink); background: #fffef9; font: inherit; font-size: 11px; }
+		.language-select:focus-visible { outline: 3px solid var(--coral); outline-offset: 2px; }
+		.site-information { border-top: 1px solid #d5dacd; color: var(--ink); background: #fffef9; }
+		.site-information-inner { width: min(100%, 1120px); margin: auto; padding: 46px clamp(18px, 4vw, 58px) 30px; }
+		.site-information-kicker { margin: 0 0 8px; color: #638174; font-size: 10px; font-weight: 900; }
+		.site-information h2 { margin: 0; font: 700 25px/1.2 Georgia, "Malgun Gothic", serif; }
+		.site-information-intro { max-width: 720px; margin: 10px 0 0; color: #596c61; font-size: 13px; line-height: 1.8; }
+		.site-information-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 28px; margin-top: 30px; }
+		.site-information-grid article { padding-top: 13px; border-top: 2px solid #d9e3d8; }
+		.site-information-grid h3 { margin: 0 0 7px; color: var(--ink); font-size: 13px; }
+		.site-information-grid p { margin: 0; color: #66776d; font-size: 12px; line-height: 1.8; }
+		.site-information-links { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 28px; padding-top: 17px; border-top: 1px solid #e0e5dc; }
+		.site-information-links a { color: #315c4d; font-size: 11px; font-weight: 800; text-underline-offset: 3px; }
+		.site-information-links a:hover { color: #a45b48; }
+		.adsbygoogle { display: block !important; background: #f5f5f5; border: 1px solid #ddd; border-radius: 8px; }
+		@media (max-width: 600px) {
+			.adsbygoogle { margin-bottom: 8px !important; margin-top: 8px !important; }
+		}
+		.shop-item-info { padding: 0; border: 0; border-radius: 8px; color: var(--ink); background: transparent; box-shadow: none; font: inherit; text-align: left; cursor: pointer; }
+		.shop-item-info:hover { background: transparent; }
+		.shop-item-info:hover .shop-item-name { text-decoration: underline; text-underline-offset: 2px; }
+		.shop-item-info:focus-visible { outline: 2px solid #b9765e; outline-offset: 3px; }
+		.shop-toy-portrait { width: 46px; height: 46px; flex: 0 0 46px; display: block; }
+		:root[data-theme="dark"] { color-scheme: dark; --ink: #e7ece6; --muted: #a5b0a7; --paper: #222b27; --line: #46534b; --surface: #2a342f; --coral: #e39b82; --yellow: #dfc075; --brass: #c4a66a; }
+		:root[data-theme="dark"] body { color: var(--ink); background-color: #151d1a; background-image: radial-gradient(#34423a 1px, transparent 1px); }
+		:root[data-theme="dark"] .topbar { border-color: #39463f; background: #19221feb; }
+		:root[data-theme="dark"] .subtitle, :root[data-theme="dark"] .score-label { color: #aeb8a9; }
+		:root[data-theme="dark"] .score-box { border-color: #46534b; }
+		:root[data-theme="dark"] .score-value { color: #e7ece6; }
+		:root[data-theme="dark"] .machine-wrap { border-color: #536258; background: #202a26; }
+		:root[data-theme="dark"] .site-information { border-color: #39463f; background: #19221f; }
+		:root[data-theme="dark"] .site-information-intro, :root[data-theme="dark"] .site-information-grid p { color: #a5b0a7; }
+		:root[data-theme="dark"] .site-information-grid article { border-color: #536258; }
+		:root[data-theme="dark"] .site-information-links { border-color: #39463f; }
+		:root[data-theme="dark"] .site-information-links a { color: #d3c28f; }
+		:root[data-theme="dark"] .map-switch { border-color: #647064; background: #18231fe8; }
+		:root[data-theme="dark"] .map-tab { color: #c4cdc4; }
+		:root[data-theme="dark"] .map-tab[aria-pressed="true"] { border-color: #d5bd82; color: #1d2722; background: #d5bd82; }
+		:root[data-theme="dark"] .restock-status { border-color: #647064; color: #f0eee3; background: #18231fe8; }
+		:root[data-theme="dark"] .restock-label { color: #d5bd82; }
+		:root[data-theme="dark"] .controls { border-color: #39463f; }
+		:root[data-theme="dark"] .hint, :root[data-theme="dark"] .bag-summary, :root[data-theme="dark"] .shop-status { color: #a5b0a7; }
+		:root[data-theme="dark"] .hint strong { color: #e7ece6; }
+		:root[data-theme="dark"] button { border-color: #536158; color: #e7ece6; background: #2a342f; }
+		:root[data-theme="dark"] button:hover { border-color: #899487; background: #37433c; }
+		:root[data-theme="dark"] .joystick { border-color: #536158; background: radial-gradient(circle, #303a34 0 24%, #25302a 25% 63%, #1d2722 64% 100%); box-shadow: inset 0 2px 7px #0005; }
+		:root[data-theme="dark"] .joystick::before { border-color: #aab8a755; }
+		:root[data-theme="dark"] .joystick-knob { border-color: #897a5a; background: linear-gradient(145deg, #ddc990, #87704a); }
+		:root[data-theme="dark"] .bag-button { border-color: #4a5b50; color: #dce5dc; background: #293730; }
+		:root[data-theme="dark"] .drop-button { border-color: #b49a68; color: #fffaf0; background: #917444; }
+		:root[data-theme="dark"] .drop-button:hover { background: #a18450; }
+		:root[data-theme="dark"] .coin-display { border-color: #5c553f; background: #383529; }
+		:root[data-theme="dark"] .coin-value { color: #e1c47f; }
+		:root[data-theme="dark"] .add-coin-button { border-color: #746543; color: #f0dfb6; background: #51472f; }
+		:root[data-theme="dark"] .daily-bonus-button { border-color: #746543; color: #f0dfb6; background: #4a4431; }
+		:root[data-theme="dark"] .community-button:not(.instagram-button) { border-color: #6b6250; color: #ead9b5; background: #353126; }
+		:root[data-theme="dark"] .community-button.instagram-button { border-color: #59645b; color: #e7ece6; background: #222b27; }
+		:root[data-theme="dark"] .auth-panel, :root[data-theme="dark"] .bag-panel, :root[data-theme="dark"] .reward-panel { border-color: #4a574d; color: var(--ink); background: #222b27; }
+		:root[data-theme="dark"] .auth-tabs { background: #303a34; }
+		:root[data-theme="dark"] .auth-tab[aria-selected="true"] { color: #f0dfb6; }
+		:root[data-theme="dark"] .auth-field input, :root[data-theme="dark"] .shop-price-input { border-color: #536158; color: var(--ink); background: #18211d; }
+		:root[data-theme="dark"] .bag-item, :root[data-theme="dark"] .bag-item-button, :root[data-theme="dark"] .bag-empty, :root[data-theme="dark"] .shop-card { border-color: #46534b; color: var(--ink); background: #2a342f; }
+		:root[data-theme="dark"] .bag-item-button:hover { background: #37433c; }
+		:root[data-theme="dark"] .combine-action.primary { border-color: #587261; color: #f2f4ee; background: #385344; }
+		:root[data-theme="dark"] .bag-item-date, :root[data-theme="dark"] .shop-item-meta, :root[data-theme="dark"] .combine-button span:last-child { color: #a5b0a7; }
+		:root[data-theme="dark"] .shop-item-info { color: var(--ink); background: transparent; }
+		:root[data-theme="dark"] .shop-price { color: #e1c47f; }
+		:root[data-theme="dark"] .shop-buy-button, :root[data-theme="dark"] .shop-sell-button, :root[data-theme="dark"] .auth-submit, :root[data-theme="dark"] .reward-action { border-color: #587261; color: #f2f4ee; background: #385344; }
+		:root[data-theme="dark"] .shop-buy-button:hover, :root[data-theme="dark"] .shop-sell-button:hover, :root[data-theme="dark"] .auth-submit:hover, :root[data-theme="dark"] .reward-action:hover { background: #476b56; }
+		:root[data-theme="dark"] .reward-action.secondary { border-color: #536158; color: var(--ink); background: #2a342f; }
+		:root[data-theme="dark"] .reward-art { border-color: #48564c; background: radial-gradient(circle at 50% 42%, #414b3f 0 28%, #242e29 78%); }
+		:root[data-theme="dark"] .reward-rotate-hint { border-color: #536158; color: var(--ink); background: #222b27dd; }
+		:root[data-theme="dark"] .hint.hint-coin-alert { border-color: #7b6547; color: #f2dfc0; background: #3a3028; }
+		@media (max-width: 600px) { .map-tab#mapPolitics { min-width: 0; } }
+	</style>
+	<script type="importmap">
+		{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/", "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2" } }
+	</script>
+</head>
+<body>
+	<main class="arcade" aria-label="말랑말랑 인형뽑기 게임">
+		<header class="topbar">
+			<div class="brand">
+				<div class="brand-mark" aria-hidden="true">PC</div>
+				<div>
+					<h1>말랑말랑 인형뽑기</h1>
+					<p class="subtitle">PLUSH CLUB · ARCADE 01</p>
+				</div>
+			</div>
+			<div class="score-box" aria-live="polite">
+				<span class="score-label">데려온 친구</span>
+				<span class="score-value" id="score">0 마리</span>
+			</div>
+			<label class="language-control"><span class="language-icon" aria-hidden="true">🌐</span><select class="language-select" id="languageSelect" aria-label="언어 선택">
+				<option value="ko">한국어</option>
+				<option value="en">English</option>
+				<option value="ja">日本語</option>
+				<option value="zh">中文</option>
+			</select></label>
+			<button class="theme-toggle" id="themeToggle" type="button" aria-label="다크 모드 켜기" title="다크 모드 켜기" aria-pressed="false">☾</button>
+			<div class="account-tools" id="accountTools" hidden>
+				<span class="account-name" id="accountName"></span>
+				<div class="coin-display"><span aria-hidden="true">●</span><span class="coin-value" id="coins">0</span><button class="small-button add-coin-button" id="addCoins" type="button">+5 코인</button></div>
+				<button class="small-button daily-bonus-button" id="dailyBonus" type="button">🎁 일일 보너스 (200코인)</button>
+				<button class="bag-button" id="openBag" type="button">가방 <span class="bag-count" id="bagCount">0</span></button>
+				<button class="bag-button" id="openShop" type="button">상점</button>
+				<a class="community-button" href="https://youdomae-main.pages.dev/" target="_blank" rel="noopener noreferrer">익명 커뮤니티 <span aria-hidden="true">↗</span></a>
+				<a class="community-button instagram-button" href="https://www.instagram.com/9sept10th/" target="_blank" rel="noopener noreferrer" aria-label="Instagram 계정 열기"><svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="18" cy="6" r="1" fill="currentColor" stroke="none"></circle></svg> Instagram</a>
+				<button class="small-button" id="logout" type="button">로그아웃</button>
+			</div>
+			<div class="guest-tools" id="guestTools">
+				<span>게스트 플레이</span>
+				<div class="coin-display"><span aria-hidden="true">●</span><span class="coin-value" id="guestCoins">0</span><button class="small-button add-coin-button" id="addGuestCoins" type="button">+5 코인</button></div>
+				<button class="small-button daily-bonus-button" id="dailyBonus" type="button">🎁 일일 보너스 (200코인)</button>
+				<a class="community-button" href="https://youdomae-main.pages.dev/" target="_blank" rel="noopener noreferrer">익명 커뮤니티 <span aria-hidden="true">↗</span></a>
+				<a class="community-button instagram-button" href="https://www.instagram.com/9sept10th/" target="_blank" rel="noopener noreferrer" aria-label="Instagram 계정 열기"><svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="18" cy="6" r="1" fill="currentColor" stroke="none"></circle></svg> Instagram</a>
+				<button class="small-button" id="openAuth" type="button">로그인</button>
+			</div>
+		</header>
+		<div class="machine-toolbar" aria-label="게임 설정">
+			<nav class="map-switch" aria-label="인형뽑기 맵 선택">
+				<button class="map-tab" id="mapAnimals" type="button" aria-pressed="true">동물 인형</button>
+				<button class="map-tab" id="mapPolitics" type="button" aria-pressed="false">찢토피아 구매 · 1,000코인</button>
+			</nav>
+			<div class="restock-status" aria-live="polite">
+				<span class="restock-label">인형별 재입고</span>
+				<span class="restock-value" id="restock">11마리 준비 완료</span>
+			</div>
+		</div>
+		<section class="machine-wrap" aria-label="3D 인형뽑기 기계">
+			<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6873890251417614" crossorigin="anonymous"></script>
+			<ins class="adsbygoogle" style="display:block;margin-bottom:12px;" data-ad-client="ca-pub-6873890251417614" data-ad-slot="1234567890" data-ad-format="auto" data-full-width-responsive="true"></ins>
+			<script>
+				(adsbygoogle = window.adsbygoogle || []).push({});
+			</script>
+			<canvas id="game" width="960" height="570" aria-label="드래그해 인형뽑기 기계 시점을 돌리고, 확대 축소 버튼으로 화면 크기를 조절하세요"></canvas>
+			<a class="ad-inquiry-accessible-link" href="https://www.instagram.com/9sept10th/" target="_blank" rel="noopener noreferrer">인형뽑기 뒤쪽 판의 광고 제휴 문의 (Instagram 새 탭)</a>
+			<div class="stage-label">CLAW MACHINE</div>
+			<div class="zoom-controls" role="group" aria-label="화면 확대 및 축소">
+				<button class="zoom-button" id="zoomIn" type="button" aria-label="화면 확대" title="확대">+</button>
+				<button class="zoom-button" id="zoomOut" type="button" aria-label="화면 축소" title="축소">−</button>
+			</div>
+			<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6873890251417614" crossorigin="anonymous"></script>
+			<ins class="adsbygoogle" style="display:block;margin-top:12px;" data-ad-client="ca-pub-6873890251417614" data-ad-slot="0987654321" data-ad-format="auto" data-full-width-responsive="true"></ins>
+			<script>
+				(adsbygoogle = window.adsbygoogle || []).push({});
+			</script>
+		</section>
+		<footer class="controls">
+			<p class="hint" id="status" aria-live="polite"><strong>화면 드래그</strong>로 기계를 돌리고<br><strong>조이스틱</strong>으로 집게를 움직이세요</p>
+			<div class="button-group" aria-label="게임 조작">
+				<div class="joystick" id="joystick" role="group" aria-label="집게 조이스틱. 드래그하여 방향과 거리를 조절하세요." tabindex="0"><span class="joystick-knob" id="joystickKnob" aria-hidden="true"></span></div>
+				<button class="drop-button" id="drop" type="button">인형 뽑기 <span class="keycap">SPACE</span></button>
+				<button class="reset-button" id="reset" type="button" aria-label="게임 다시 시작" title="다시 시작">↻</button>
+			</div>
+		</footer>
+	</main>
+	<section class="auth-gate" id="authGate" aria-label="계정 로그인" hidden>
+		<div class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+			<span class="auth-kicker">PLUSH CLUB · MEMBERS</span>
+			<h2 id="authTitle">인형 친구를 만나볼까요?</h2>
+			<p class="auth-intro">계정에 로그인하면 코인을 충전해 플레이하고, 뽑은 인형을 나만의 가방에 모을 수 있어요.</p>
+			<div class="auth-tabs" role="tablist" aria-label="로그인 또는 회원가입">
+				<button class="auth-tab" id="loginTab" type="button" role="tab" aria-selected="true">로그인</button>
+				<button class="auth-tab" id="signupTab" type="button" role="tab" aria-selected="false">회원가입</button>
+			</div>
+			<form class="auth-form" id="authForm">
+				<label class="auth-field" id="emailField" hidden>이메일<input id="email" name="email" type="email" autocomplete="email"></label>
+				<label class="auth-field" id="usernameField">아이디<input id="username" name="username" autocomplete="username" minlength="2" maxlength="16" required></label>
+				<label class="auth-field">비밀번호<input id="password" name="password" type="password" autocomplete="current-password" minlength="8" required></label>
+				<label class="auth-field" id="confirmField" hidden>비밀번호 확인<input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" minlength="8"></label>
+				<p class="auth-error" id="authError" role="alert"></p>
+				<button class="auth-submit" id="authSubmit" type="submit">로그인</button>
+			</form>
+			<button class="small-button" id="resendConfirmation" type="button" hidden>인증 메일 다시 보내기</button>
+			<button class="small-button" id="continueGuest" type="button" style="width: 100%; margin-top: 8px">게스트로 계속 플레이</button>
+			<p class="auth-note">계정과 게임 기록은 이 브라우저에 저장됩니다.</p>
+		</div>
+	</section>
+	<section class="bag-gate" id="bagGate" aria-label="내 인형 가방" hidden>
+		<button class="bag-backdrop" id="closeBagBackdrop" type="button" aria-label="가방 닫기"></button>
+		<div class="bag-panel" role="dialog" aria-modal="true" aria-labelledby="bagTitle">
+			<div class="bag-heading"><div><h2 id="bagTitle">내 인형 가방</h2><p class="bag-summary" id="bagSummary">아직 데려온 친구가 없어요.</p></div><button class="reset-button" id="closeBag" type="button" aria-label="가방 닫기">×</button></div>
+			<ul class="bag-list" id="bagItems"></ul>
+		</div>
+	</section>
+	<section class="bag-gate" id="shopGate" aria-label="인형 상점" hidden>
+		<button class="bag-backdrop" id="closeShopBackdrop" type="button" aria-label="상점 닫기"></button>
+		<div class="bag-panel" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
+			<div class="bag-heading"><div><h2 id="shopTitle">인형 상점</h2><p class="bag-summary">다른 회원과 인형을 거래해요.</p></div><div class="bag-heading-actions"><button class="small-button" id="refreshShop" type="button" aria-label="매물 새로고침" title="새로고침">↻</button><button class="reset-button" id="closeShop" type="button" aria-label="상점 닫기">×</button></div></div>
+			<section class="shop-section" aria-labelledby="listingsTitle">
+				<h3 class="shop-section-title" id="listingsTitle">판매 중인 인형</h3>
+				<p class="shop-status" id="shopStatus" aria-live="polite"></p>
+				<ul class="shop-list" id="shopListings"></ul>
+			</section>
+			<section class="shop-section" aria-labelledby="sellItemsTitle">
+				<h3 class="shop-section-title" id="sellItemsTitle">내 인형 판매 등록</h3>
+				<ul class="shop-list" id="shopSellItems"></ul>
+			</section>
+		</div>
+	</section>
+	<section class="reward-gate" id="rewardGate" aria-label="인형 획득 축하" aria-modal="true" role="dialog" hidden>
+		<div class="reward-panel">
+			<div class="reward-fireworks" id="prizeFireworks" aria-hidden="true"></div>
+			<span class="reward-kicker">A NEW FRIEND!</span>
+			<h2 id="prizeTitle">인형을 뽑으셨어요!</h2>
+			<p class="reward-copy">축하해요, 새로운 친구가 도착했어요.</p>
+			<div class="reward-art"><canvas id="prizeCanvas" aria-label="방금 뽑은 인형 3D 미리보기. 손가락이나 마우스로 끌어 회전"></canvas><span class="reward-sparkle"></span><span class="reward-rotate-hint" aria-hidden="true">↻ 360°</span></div>
+			<p class="reward-name" id="prizeName"></p>
+			<div class="reward-actions">
+				<button class="reward-action" id="sharePrize" type="button">공유하기</button>
+				<button class="reward-action secondary" id="closePrize" type="button">닫기</button>
+			</div>
+		</div>
+	</section>
+	<section class="site-information" aria-labelledby="siteInformationTitle">
+		<div class="site-information-inner">
+			<p class="site-information-kicker">PLUSH CLUB · ARCADE 01</p>
+			<h2 id="siteInformationTitle">말랑말랑 인형뽑기, 브라우저에서 즐기는 3D 아케이드</h2>
+			<p class="site-information-intro">집게의 좌우뿐 아니라 앞뒤 위치까지 맞춰 인형을 노려보세요. 동물 맵과 찢토피아에는 서로 다른 인형이 있고, 찢칠라는 집게가 가까이 오면 도망갑니다. 아래 안내에서 조작법, 코인 규칙, 계정별 보관 방식을 확인할 수 있습니다.</p>
+			
+			<div class="site-information-grid">
+				<article>
+					<h3>조작과 포획 방법</h3>
+					<p>마우스나 손가락으로 화면을 드래그해 기계 시점을 자유롭게 회전시킵니다. 화면 좌측 조이스틱 또는 키보드의 방향키, WASD로 집게를 앞뒤좌우로 이동하고, 스페이스바나 우측의 '인형 뽑기' 버튼으로 집게를 내려보내세요. 집게의 정확한 위치, 내려보내는 타이밍, 인형의 무게와 위치에 따라 포획 결과가 결정됩니다.</p>
+				</article>
+				<article>
+					<h3>코인 시스템과 게임 맵</h3>
+					<p>각 플레이마다 코인 1개를 소비합니다. 코인은 5분마다 자동으로 5개씩 회복되며, 최대 50개까지 보유 가능합니다. 추가로 일일 보너스 버튼을 통해 24시간마다 200코인을 한 번에 받을 수 있습니다. 기본 맵인 '동물 인형'은 자유롭게 플레이할 수 있습니다. 두 번째 맵인 '찢토피아'는 1,000코인을 지불해 처음 한 번만 입장권을 구매하면 이후 무료로 입장할 수 있습니다.</p>
+				</article>
+				<article>
+					<h3>계정, 가방, 상점 기능</h3>
+					<p>게스트 플레이로도 게임을 즐길 수 있지만, 계정에 로그인하면 획득한 인형을 나만의 가방에 영구 보관할 수 있습니다. 인형 상점에서는 다른 플레이어와 인형을 거래할 수 있으며, Supabase 계정으로 로그인한 경우에 모든 거래 기능이 활성화됩니다.</p>
+				</article>
+				<article>
+					<h3>게임 특징과 메커닉</h3>
+					<p>이 게임은 실제 오락실 집게기계의 물리를 충실히 재현한 3D 게임입니다. 마찬가지로 실제 기계처럼 집게의 힘이 완벽하지 않을 수 있고, 인형이 미끄러질 수 있습니다. 두 개의 맵에는 총 11가지 다양한 동물 인형이 있으며, 찢토피아 맵에는 특별한 NPC인 '찢칠라'가 있어 집게가 가까이 오면 도망갑니다.</p>
+				</article>
+				<article>
+					<h3>장치 호환성</h3>
+					<p>말랑말랑 인형뽑기는 모든 최신 웹 브라우저에서 작동하며, 데스크톱, 태블릿, 모바일 기기를 완벽히 지원합니다. 조이스틱이나 마우스, 손가락 터치 모두에 최적화되어 있으므로 편한 방식으로 플레이하실 수 있습니다.</p>
+				</article>
+				<article>
+					<h3>지원하는 언어</h3>
+					<p>현재 한국어(한글), English(영어), 日本語(일본어), 中文(중국어)를 완벽히 지원합니다. 웹사이트 우측 상단의 언어 선택 드롭다운에서 원하는 언어로 변경할 수 있습니다.</p>
+				</article>
+			</div>
+			
+			<section style="margin-top: 32px; padding-top: 24px; border-top: 2px solid #e0e0e0;">
+				<h3 style="margin-top: 0;">자주 묻는 질문 (FAQ)</h3>
+				<article style="margin-bottom: 16px;">
+					<h4>Q: 인형을 못 뽑으면 코인이 환불되나요?</h4>
+					<p style="margin-bottom: 0;">A: 아니요, 게임 특성상 실패해도 코인은 소비됩니다. 실제 오락실 기계와 동일한 방식입니다.</p>
+				</article>
+				<article style="margin-bottom: 16px;">
+					<h4>Q: 획득한 인형은 어디에 저장되나요?</h4>
+					<p style="margin-bottom: 0;">A: 계정에 로그인했을 경우, 서버에 저장되어 어느 기기에서나 접근할 수 있습니다. 게스트 플레이로 뽑은 인형은 해당 브라우저의 로컬 스토리지에만 저장됩니다.</p>
+				</article>
+				<article style="margin-bottom: 16px;">
+					<h4>Q: 다른 플레이어와 인형을 거래할 수 있나요?</h4>
+					<p style="margin-bottom: 0;">A: 네, 상점 기능에서 다른 사용자의 판매 인형을 구매하거나 자신의 인형을 판매할 수 있습니다.</p>
+				</article>
+				<article>
+					<h4>Q: 서비스에 대한 문의나 건의는 어떻게 하나요?</h4>
+					<p style="margin-bottom: 0;">A: 상단 메뉴의 Instagram 계정으로 직접 메시지를 보내주시면 빠르게 답변해드립니다.</p>
+				</article>
+			</section>
+			
+			<nav class="site-information-links" aria-label="사이트 안내" style="margin-top: 24px;">
+				<a href="https://youdomae-main.pages.dev/" target="_blank" rel="noopener noreferrer">익명 커뮤니티</a>
+				<a href="https://www.instagram.com/9sept10th/" target="_blank" rel="noopener noreferrer">Instagram 서비스 문의</a>
+				<a href="#privacy">개인정보처리방침</a>
+				<a href="#terms">이용약관</a>
+			</nav>
+		</div>
+	</section>
+			<nav class="site-information-links" aria-label="사이트 안내">
+				<a href="/guide">전체 이용 가이드</a>
+				<a href="/privacy">개인정보처리방침</a>
+				<a href="https://www.instagram.com/9sept10th/" target="_blank" rel="noopener noreferrer">서비스 문의 (Instagram 새 탭)</a>
+			</nav>
+		</div>
+	</section>
+	<script type="application/json">
+		(() => {
+			const canvas = document.querySelector("#game");
+			const context = canvas.getContext("2d");
+			const scoreLabel = document.querySelector("#score");
+			const status = document.querySelector("#status");
+			const dropButton = document.querySelector("#drop");
+			const width = 960;
+			const height = 570;
+			const floor = 472;
+			const toys = [
+				{ x: 169, y: floor - 32, color: "#ed826b", kind: "bear", size: 1 },
+				{ x: 265, y: floor - 27, color: "#efc85e", kind: "chick", size: 0.88 },
+				{ x: 352, y: floor - 35, color: "#93cba0", kind: "frog", size: 1.08 },
+				{ x: 445, y: floor - 30, color: "#c49ad1", kind: "bunny", size: 0.92 },
+				{ x: 540, y: floor - 37, color: "#f09a76", kind: "cat", size: 1.12 },
+				{ x: 641, y: floor - 29, color: "#82b9d1", kind: "bear", size: 0.94 },
+				{ x: 223, y: floor - 88, color: "#96c9b0", kind: "bunny", size: 0.91 },
+				{ x: 324, y: floor - 86, color: "#f2a0a4", kind: "bear", size: 1.08 },
+				{ x: 427, y: floor - 90, color: "#f2d276", kind: "chick", size: 1.02 },
+				{ x: 537, y: floor - 86, color: "#a69bdb", kind: "frog", size: 0.98 },
+				{ x: 621, y: floor - 87, color: "#e58e78", kind: "cat", size: 1.04 },
+			];
+			const claw = { x: 180, cable: 0, mode: "ready", target: null };
+			const keys = new Set();
+			let score = 0;
+			let previousTime = 0;
+			let deliveredThisRound = false;
+
+			function resizeCanvas() {
+				const bounds = canvas.getBoundingClientRect();
+				const ratio = Math.min(window.devicePixelRatio || 1, 2);
+				canvas.width = Math.round(bounds.width * ratio);
+				canvas.height = Math.round(bounds.height * ratio);
+				context.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
+			}
+
+			function roundedRect(x, y, w, h, radius, fill, stroke, lineWidth = 2) {
+				context.beginPath();
+				context.roundRect(x, y, w, h, radius);
+				context.fillStyle = fill;
+				context.fill();
+				if (stroke) {
+					context.lineWidth = lineWidth;
+					context.strokeStyle = stroke;
+					context.stroke();
+				}
+			}
+
+			function drawToy(toy, x = toy.x, y = toy.y, scale = toy.size) {
+				context.save();
+				context.translate(x, y);
+				context.scale(scale, scale);
+				context.lineWidth = 2.5;
+				context.strokeStyle = "#31524a";
+				context.fillStyle = toy.color;
+
+				if (toy.kind === "chick") {
+					context.beginPath(); context.ellipse(0, -18, 22, 23, 0, 0, Math.PI * 2); context.fill(); context.stroke();
+					context.fillStyle = "#e99553";
+					context.beginPath(); context.moveTo(-5, -17); context.lineTo(5, -17); context.lineTo(0, -12); context.closePath(); context.fill();
+					context.fillStyle = "#31524a";
+					context.beginPath(); context.arc(-8, -24, 2, 0, Math.PI * 2); context.arc(8, -24, 2, 0, Math.PI * 2); context.fill();
+					context.restore(); return;
+				}
+
+				if (toy.kind === "bunny") {
+					context.beginPath(); context.ellipse(-10, -49, 7, 17, -0.22, 0, Math.PI * 2); context.ellipse(10, -49, 7, 17, 0.22, 0, Math.PI * 2); context.fill(); context.stroke();
+					context.fillStyle = "#f5c2c3";
+					context.beginPath(); context.ellipse(-10, -49, 3, 11, -0.22, 0, Math.PI * 2); context.ellipse(10, -49, 3, 11, 0.22, 0, Math.PI * 2); context.fill();
+				}
+
+				if (toy.kind === "bear" || toy.kind === "cat") {
+					context.beginPath();
+					if (toy.kind === "bear") {
+						context.arc(-15, -47, 9, 0, Math.PI * 2); context.arc(15, -47, 9, 0, Math.PI * 2);
+					} else {
+						context.moveTo(-23, -42); context.lineTo(-21, -62); context.lineTo(-7, -50); context.closePath();
+						context.moveTo(23, -42); context.lineTo(21, -62); context.lineTo(7, -50); context.closePath();
+					}
+					context.fillStyle = toy.color; context.fill(); context.stroke();
+				}
+
+				if (toy.kind === "frog") {
+					context.beginPath(); context.arc(-12, -48, 10, 0, Math.PI * 2); context.arc(12, -48, 10, 0, Math.PI * 2); context.fill(); context.stroke();
+					context.fillStyle = "#fffdf6"; context.beginPath(); context.arc(-12, -48, 5, 0, Math.PI * 2); context.arc(12, -48, 5, 0, Math.PI * 2); context.fill();
+				}
+
+				context.fillStyle = toy.color;
+				context.beginPath(); context.ellipse(0, -29, 23, 27, 0, 0, Math.PI * 2); context.fill(); context.stroke();
+				context.fillStyle = "#fff1dc";
+				context.beginPath(); context.ellipse(0, -20, 12, 9, 0, 0, Math.PI * 2); context.fill();
+				context.fillStyle = "#31524a";
+				context.beginPath(); context.arc(-8, -34, 2.2, 0, Math.PI * 2); context.arc(8, -34, 2.2, 0, Math.PI * 2); context.fill();
+				context.beginPath(); context.arc(0, -26, 2, 0, Math.PI * 2); context.fill();
+				context.strokeStyle = "#31524a"; context.lineWidth = 1.5;
+				context.beginPath(); context.arc(-2, -24, 4, 0.15, 1.25); context.stroke();
+				context.fillStyle = "#e98680";
+				context.beginPath(); context.arc(-14, -25, 3, 0, Math.PI * 2); context.arc(14, -25, 3, 0, Math.PI * 2); context.fill();
+				context.restore();
+			}
+
+			function drawBackground() {
+				const sky = context.createLinearGradient(0, 0, 0, floor);
+				sky.addColorStop(0, "#d8f3e5"); sky.addColorStop(1, "#b4e1d3");
+				context.fillStyle = sky; context.fillRect(0, 0, width, height);
+				context.fillStyle = "#fffdf6";
+				context.beginPath(); context.arc(82, 105, 27, 0, Math.PI * 2); context.arc(112, 105, 20, 0, Math.PI * 2); context.arc(99, 91, 22, 0, Math.PI * 2); context.fill();
+				context.beginPath(); context.arc(755, 154, 19, 0, Math.PI * 2); context.arc(778, 154, 14, 0, Math.PI * 2); context.arc(768, 143, 17, 0, Math.PI * 2); context.fill();
+				roundedRect(28, 25, 904, 438, 22, "#b9e8d5", "#31524a", 4);
+				roundedRect(45, 39, 870, 408, 18, "#d5f1df", "#ffffff", 4);
+				context.fillStyle = "#c8ead4";
+				context.beginPath(); context.ellipse(446, 437, 315, 32, 0, 0, Math.PI * 2); context.fill();
+				context.fillStyle = "#97ccaa";
+				context.beginPath(); context.ellipse(446, 449, 315, 22, 0, 0, Math.PI * 2); context.fill();
+				for (const toy of toys) {
+					if (toy === claw.target) continue;
+					context.fillStyle = "#506b54";
+					context.beginPath(); context.ellipse(toy.x, toy.y + 1, 20 * toy.size, 5, 0, 0, Math.PI * 2); context.fill();
+					drawToy(toy);
+				}
+				context.fillStyle = "#668c71"; context.fillRect(52, floor, 690, 9);
+				context.fillStyle = "#496c5b"; context.fillRect(52, floor + 9, 690, 8);
+				roundedRect(748, 379, 147, 90, 8, "#f1cb73", "#31524a", 3);
+				roundedRect(763, 395, 117, 56, 6, "#fff9e8", "#31524a", 2);
+				context.fillStyle = "#e98068";
+				context.beginPath(); context.moveTo(780, 409); context.lineTo(863, 409); context.lineTo(851, 437); context.lineTo(793, 437); context.closePath(); context.fill();
+				context.fillStyle = "#31524a"; context.font = "bold 14px Trebuchet MS, sans-serif"; context.textAlign = "center";
+				context.fillText("선물 도착!", 821, 393); context.textAlign = "left";
+			}
+
+			function drawClaw() {
+				const closed = ["lift", "deliver", "return"].includes(claw.mode);
+				const tipY = 120 + claw.cable;
+				context.strokeStyle = "#78948a"; context.lineWidth = 3;
+				context.beginPath(); context.moveTo(claw.x, 61); context.lineTo(claw.x, tipY); context.stroke();
+				roundedRect(claw.x - 26, 48, 52, 23, 8, "#f1cb73", "#31524a", 3);
+				context.fillStyle = "#fff2c8"; context.fillRect(claw.x - 13, 54, 26, 5);
+				context.strokeStyle = "#31524a"; context.lineWidth = 5; context.lineCap = "round";
+				context.beginPath(); context.moveTo(claw.x, tipY); context.lineTo(claw.x, tipY + 13); context.stroke();
+				context.beginPath();
+				if (closed) {
+					context.moveTo(claw.x, tipY + 10); context.lineTo(claw.x - 14, tipY + 24);
+					context.moveTo(claw.x, tipY + 10); context.lineTo(claw.x + 14, tipY + 24);
+				} else {
+					context.moveTo(claw.x, tipY + 10); context.lineTo(claw.x - 23, tipY + 30);
+					context.moveTo(claw.x, tipY + 10); context.lineTo(claw.x + 23, tipY + 30);
+				}
+				context.stroke(); context.lineCap = "butt";
+			}
+
+			function draw() {
+				context.clearRect(0, 0, width, height);
+				drawBackground();
+				if (claw.target && claw.mode !== "drop") drawToy(claw.target, claw.x, 120 + claw.cable + 37, claw.target.size);
+				drawClaw();
+				if (claw.mode === "ready") {
+					context.fillStyle = "#31524a"; context.font = "bold 13px Trebuchet MS, sans-serif"; context.textAlign = "center";
+					context.fillText("↔ 인형 위에 집게를 맞춰 보세요", 446, 540); context.textAlign = "left";
+				}
+			}
+
+			function beginDrop() {
+				if (claw.mode !== "ready") return;
+				claw.mode = "drop"; claw.target = null; claw.cable = 0;
+				deliveredThisRound = false; dropButton.disabled = true;
+				status.textContent = "집게가 내려가는 중이에요...";
+			}
+
+			function finishRound() {
+				if (!deliveredThisRound) status.textContent = "아깝다! 집게를 인형 위에 맞춰 다시 해봐요.";
+				deliveredThisRound = false;
+				claw.mode = "ready"; claw.target = null; claw.cable = 0; claw.x = 100;
+				dropButton.disabled = false;
+			}
+
+			function update(delta) {
+				if (claw.mode === "ready") {
+					const direction = (keys.has("ArrowRight") || keys.has("d") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("a") ? 1 : 0);
+					claw.x = Math.max(100, Math.min(700, claw.x + direction * delta * 0.34));
+					return;
+				}
+				if (claw.mode === "drop") {
+					claw.cable = Math.min(346, claw.cable + delta * 0.36);
+					if (claw.cable >= 346) {
+						const nearest = toys.reduce((best, toy) => Math.abs(toy.x - claw.x) < Math.abs(best.x - claw.x) ? toy : best, toys[0]);
+						claw.mode = Math.abs(nearest.x - claw.x) < 40 ? "lift" : "miss";
+						claw.target = claw.mode === "lift" ? nearest : null;
+					}
+				} else if (claw.mode === "lift" || claw.mode === "miss") {
+					claw.cable = Math.max(0, claw.cable - delta * 0.38);
+					if (claw.cable <= 0) claw.mode = claw.target ? "deliver" : "return";
+				} else if (claw.mode === "deliver") {
+					claw.x = Math.min(821, claw.x + delta * 0.47);
+					if (claw.x >= 821) {
+						claw.mode = "return"; score += 1; scoreLabel.textContent = `${score} 마리`;
+						toys.splice(toys.indexOf(claw.target), 1);
+						deliveredThisRound = true; status.textContent = "성공! 새 친구가 선물 상자에 도착했어요.";
+						claw.target = null;
+					}
+				} else if (claw.mode === "return") {
+					claw.x = Math.max(100, claw.x - delta * 0.52);
+					if (claw.x <= 100) finishRound();
+				}
+			}
+
+			function frame(time) {
+				const delta = Math.min(time - (previousTime || time), 32);
+				previousTime = time; update(delta); draw(); requestAnimationFrame(frame);
+			}
+
+			function holdButton(button, key) {
+				const start = (event) => { event.preventDefault(); keys.add(key); button.classList.add("pressed"); };
+				const end = () => { keys.delete(key); button.classList.remove("pressed"); };
+				button.addEventListener("pointerdown", start);
+				window.addEventListener("pointerup", end);
+				window.addEventListener("pointercancel", end);
+				button.addEventListener("pointerleave", end);
+			}
+
+			window.addEventListener("keydown", (event) => {
+				const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+				if (["ArrowLeft", "ArrowRight", " "].includes(event.key)) event.preventDefault();
+				keys.add(key);
+				if (event.code === "Space" && !event.repeat) beginDrop();
+			});
+			window.addEventListener("keyup", (event) => keys.delete(event.key.length === 1 ? event.key.toLowerCase() : event.key));
+			window.addEventListener("blur", () => keys.clear());
+			holdButton(document.querySelector("#left"), "ArrowLeft");
+			holdButton(document.querySelector("#right"), "ArrowRight");
+			dropButton.addEventListener("click", beginDrop);
+			window.addEventListener("resize", resizeCanvas);
+			resizeCanvas(); requestAnimationFrame(frame);
+		})();
+	</script>
+	<script type="module" src="./game3d.js"></script>
+	
+	<!-- Privacy Policy and Terms Section -->
+	<section id="privacy" class="site-information" style="display: none; margin-top: 20px;">
+		<div class="site-information-inner">
+			<h2>개인정보처리방침</h2>
+			<article style="margin-bottom: 20px;">
+				<h3>1. 개인정보의 수집 항목</h3>
+				<p>말랑말랑 인형뽑기는 다음과 같은 개인정보를 수집합니다:</p>
+				<ul style="margin: 10px 0; padding-left: 20px; color: #66776d; font-size: 12px;">
+					<li>필수: 사용자 아이디, 비밀번호, 이메일 주소</li>
+					<li>선택: 프로필 정보</li>
+					<li>자동수집: 접속 로그, 쿠키, 기기 정보</li>
+				</ul>
+			</article>
+			<article style="margin-bottom: 20px;">
+				<h3>2. 개인정보의 이용목적</h3>
+				<p>수집된 개인정보는 다음 목적으로만 이용됩니다:</p>
+				<ul style="margin: 10px 0; padding-left: 20px; color: #66776d; font-size: 12px;">
+					<li>서비스 제공 및 관리</li>
+					<li>사용자 인증 및 계정 관리</li>
+					<li>게임 진행 상황 및 획득 인형 저장</li>
+					<li>서비스 개선 및 통계 분석</li>
+				</ul>
+			</article>
+			<article style="margin-bottom: 20px;">
+				<h3>3. 개인정보의 보관 및 삭제</h3>
+				<p>개인정보는 서비스 이용 기간 동안 보관되며, 계정 삭제 시 개인정보는 지체 없이 삭제됩니다. 다만 관계 법령에 따라 일정 기간 보관해야 할 정보는 별도로 관리됩니다.</p>
+			</article>
+			<article style="margin-bottom: 20px;">
+				<h3>4. 제3자에 대한 정보 공개</h3>
+				<p>개인정보는 사용자의 동의 없이 제3자에게 공개되지 않습니다. 다만 법령에 의해 강제되는 경우는 예외입니다.</p>
+			</article>
+			<article style="margin-bottom: 20px;">
+				<h3>5. 보안</h3>
+				<p>사용자의 개인정보 보호를 위해 안전한 통신 프로토콜(HTTPS)을 사용하며, 비밀번호는 암호화하여 저장됩니다.</p>
+			</article>
+		</div>
+	</section>
+	
+	<section id="terms" class="site-information" style="display: none; margin-top: 20px;">
+		<div class="site-information-inner">
+			<h2>이용약관</h2>
+			<article style="margin-bottom: 20px;">
+				<h3>1. 서비스 이용약관</h3>
+				<p>말랑말랑 인형뽑기를 이용하면서 본 약관에 동의하는 것으로 간주됩니다.</p>
+			</article>
+			<article style="margin-bottom: 20px;">
+				<h3>2. 사용자의 의무</h3>
+				<ul style="margin: 10px 0; padding-left: 20px; color: #66776d; font-size: 12px;">
+					<li>타인의 계정을 무단으로 사용해서는 안 됩니다.</li>
+					<li>부정행위나 해킹을 시도해서는 안 됩니다.</li>
+					<li>서비스 운영을 방해하는 행동을 해서는 안 됩니다.</li>
+				</ul>
+			</article>
+			<article style="margin-bottom: 20px;">
+				<h3>3. 서비스 제공자의 책임</h3>
+				<p>서비스 제공자는 서비스 이용 중 발생하는 손해에 대해 법령에서 정한 범위 내에서만 책임을 지며, 천재지변이나 불가항력적 사유로 인한 손해는 책임을 지지 않습니다.</p>
+			</article>
+			<article style="margin-bottom: 20px;">
+				<h3>4. 지적재산권</h3>
+				<p>게임 내 모든 콘텐츠(그래픽, 음성, 텍스트 등)의 저작권은 PLUSH CLUB에 귀속됩니다.</p>
+			</article>
+		</div>
+	</section>
