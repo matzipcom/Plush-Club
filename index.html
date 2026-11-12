@@ -319,6 +319,7 @@
 		@keyframes reward-enter { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
 		@keyframes sparkle-turn { to { transform: rotate(360deg); } }
 		@keyframes reward-firework-burst { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.25); } 14% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.6) rotate(var(--turn)); } }
+		@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 		@media (prefers-reduced-motion: reduce) { .reward-panel, .reward-sparkle, .reward-firework { animation: none; } .reward-firework { opacity: 1; transform: translate(-50%, -50%); } }
 		@media (max-width: 600px) {
 			.account-tools { gap: 5px; }
@@ -667,17 +668,6 @@
 				<h3 class="shop-section-title" id="sellItemsTitle">내 인형 판매 등록</h3>
 				<ul class="shop-list" id="shopSellItems"></ul>
 			</section>
-		</div>
-	</section>
-	<section class="reward-gate" id="guestBonusRestrictedGate" aria-label="로그인 필요" aria-modal="true" role="dialog" hidden>
-		<div class="reward-panel">
-			<span class="reward-kicker">로그인 필요</span>
-			<h2>일일 보너스는 로그인한 사용자만<br>받을 수 있어요!</h2>
-			<p class="reward-copy">계정에 로그인하면 하루에 한 번 200코인 보너스를<br>받을 수 있습니다.</p>
-			<div class="reward-actions">
-				<button class="reward-button primary" id="loginFromBonusRestricted" type="button">로그인하기</button>
-				<button class="reward-button" id="closeFromBonusRestricted" type="button">닫기</button>
-			</div>
 		</div>
 	</section>
 	<section class="reward-gate" id="rewardGate" aria-label="인형 획득 축하" aria-modal="true" role="dialog" hidden>

@@ -34,7 +34,6 @@ const coinsLabel = document.querySelector("#coins");
 const accountClaimButton = document.querySelector("#addCoins");
 const guestClaimButton = document.querySelector("#addGuestCoins");
 const dailyBonusButton = document.querySelector("#dailyBonus");
-const guestBonusRestrictedGate = document.querySelector("#guestBonusRestrictedGate");
 const bagCountLabel = document.querySelector("#bagCount");
 const bagGate = document.querySelector("#bagGate");
 const bagItems = document.querySelector("#bagItems");
@@ -2000,8 +1999,12 @@ async function claimDailyBonus() {
 	if (!authGate.hidden || dailyBonusClaimPending) return;
 	
 	if (!currentAccount) {
-		guestBonusRestrictedGate.hidden = false;
-		setBusy(true);
+		status.textContent = "일일 보너스를 받기 위해선 로그인을 하셔야 합니다.";
+		status.style.fontSize = "18px";
+		status.style.fontWeight = "600";
+		status.style.color = "#ed7863";
+		status.style.animation = "pulse 0.6s ease-in-out";
+		setBusy(false);
 		return;
 	}
 	
@@ -2062,18 +2065,6 @@ function closeBag() {
 }
 document.querySelector("#closeBag").addEventListener("click", closeBag);
 document.querySelector("#closeBagBackdrop").addEventListener("click", closeBag);
-function closeGuestBonusRestricted() {
-	guestBonusRestrictedGate.hidden = true;
-	setBusy(clawState.mode !== "ready");
-	dailyBonusButton.focus();
-}
-document.querySelector("#closeFromBonusRestricted").addEventListener("click", closeGuestBonusRestricted);
-document.querySelector("#loginFromBonusRestricted").addEventListener("click", () => {
-	closeGuestBonusRestricted();
-	authGate.hidden = false;
-	setBusy(true);
-	document.querySelector("#username").focus();
-});
 shopButton.addEventListener("click", async () => {
 	if (!currentAccount || !supabaseClient) return;
 	shopGate.hidden = false;
