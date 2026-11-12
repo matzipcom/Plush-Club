@@ -1412,16 +1412,19 @@ function updateCoinClaimButtons() {
 
 function updateDailyBonusButton() {
 	const now = Date.now();
-	const nextClaimAt = currentAccount?.nextDailyBonusAt || guestNextDailyBonusAt;
+	const nextClaimAt = currentAccount?.nextDailyBonusAt || 0;
 	const remaining = Math.max(0, nextClaimAt - now);
 	if (remaining === 0) {
 		dailyBonusButton.textContent = "🎁 일일 보너스 (200코인)";
 		dailyBonusButton.title = "하루에 한 번 200코인 받기";
-		dailyBonusButton.disabled = false;
+		dailyBonusButton.disabled = !currentAccount;
 		return;
 	}
-	const hours = Math.ceil(remaining / (60 * 60 * 1000));
-	dailyBonusButton.textContent = `🎁 ${hours}시간 후`;
+	const totalSeconds = Math.ceil(remaining / 1000);
+	const hours = Math.floor(totalSeconds / 3600);
+	const minutes = Math.floor((totalSeconds % 3600) / 60);
+	const timeStr = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+	dailyBonusButton.textContent = `🎁 ${timeStr}`;
 	dailyBonusButton.title = "다음 일일 보너스까지 남은 시간";
 	dailyBonusButton.disabled = true;
 }
@@ -1994,7 +1997,13 @@ async function claimCoins() {
 
 async function claimDailyBonus() {
 	if (!authGate.hidden || dailyBonusClaimPending) return;
-	const nextClaimAt = currentAccount ? currentAccount.nextDailyBonusAt || 0 : guestNextDailyBonusAt;
+	
+	if (!currentAccount) {
+		status.textContent = "로그인을 해야 일일 보너스를 받을 수 있어요.";
+		return;
+	}
+	
+	const nextClaimAt = currentAccount.nextDailyBonusAt || 0;
 	if (nextClaimAt > Date.now()) {
 		updateDailyBonusButton();
 		return;
@@ -2002,7 +2011,7 @@ async function claimDailyBonus() {
 	dailyBonusClaimPending = true;
 	dailyBonusButton.disabled = true;
 	try {
-		if (currentAccount && supabaseClient) {
+		if (supabaseClient) {
 			const { data, error } = await supabaseClient.rpc("claim_daily_bonus");
 			if (error) throw error;
 			currentAccount.coins = data.coins;
@@ -2011,18 +2020,11 @@ async function claimDailyBonus() {
 			status.textContent = data.ok
 				? `${dailyBonusAmount}코인 일일 보너스를 받았어요! 내일 다시 받을 수 있어요.`
 				: "아직 일일 보너스를 받을 수 없어요. 남은 시간을 확인해 주세요.";
-		} else if (currentAccount) {
+		} else {
 			currentAccount.coins += dailyBonusAmount;
 			currentAccount.nextDailyBonusAt = Date.now() + dailyBonusCooldown;
 			saveCurrentAccount();
 			coinsLabel.textContent = String(currentAccount.coins);
-			status.textContent = `${dailyBonusAmount}코인 일일 보너스를 받았어요! 내일 다시 받을 수 있어요.`;
-		} else {
-			guestCoins += dailyBonusAmount;
-			guestNextDailyBonusAt = Date.now() + dailyBonusCooldown;
-			saveGuestCoins();
-			saveGuestDailyBonusClaimTime();
-			guestCoinsLabel.textContent = String(guestCoins);
 			status.textContent = `${dailyBonusAmount}코인 일일 보너스를 받았어요! 내일 다시 받을 수 있어요.`;
 		}
 		setBusy(false);
