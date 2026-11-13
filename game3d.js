@@ -1300,33 +1300,20 @@ function renderShopSellItems() {
 			}
 		});
 		
-		const priceInput = document.createElement("input");
-		priceInput.className = "shop-price-input";
-		priceInput.type = "number";
-		priceInput.min = "1";
-		priceInput.max = "1000000";
-		priceInput.step = "1";
-		priceInput.value = "20";
-		priceInput.setAttribute("aria-label", "거래 가격, 코인");
-		
 		const tradeButton = document.createElement("button");
 		tradeButton.className = "shop-sell-button";
 		tradeButton.type = "button";
-		tradeButton.textContent = "거래하기";
+		tradeButton.textContent = "거래하기 (25코인)";
 		tradeButton.disabled = !supabaseClient || !item.id;
+		const tradePrice = 25;
 		tradeButton.addEventListener("click", async () => {
-			const price = Number(priceInput.value);
-			if (!Number.isSafeInteger(price) || price < 1 || price > 1000000) {
-				shopStatus.textContent = "가격은 1~1,000,000코인 사이의 정수로 입력해 주세요.";
-				return;
-			}
 			tradeButton.disabled = true;
 			try {
-				const { error } = await supabaseClient.rpc("create_market_listing", { p_item_id: item.id, p_price: price });
+				const { error } = await supabaseClient.rpc("create_market_listing", { p_item_id: item.id, p_price: tradePrice });
 				if (error) throw error;
 				await reloadCurrentProfile();
 				await refreshShop();
-				shopStatus.textContent = `인형을 ${price}코인으로 상점에 등록했어요.`;
+				shopStatus.textContent = `인형을 ${tradePrice}코인으로 상점에 등록했어요.`;
 			} catch (error) {
 				shopStatus.textContent = error.message.includes("create_market_listing")
 					? "상점 데이터베이스 설정이 필요해요. 최신 supabase/schema.sql을 실행해 주세요."
@@ -1335,7 +1322,7 @@ function renderShopSellItems() {
 			}
 		});
 		
-		controls.append(quickSellButton, priceInput, tradeButton);
+		controls.append(quickSellButton, tradeButton);
 		listItem.append(controls);
 		shopSellItems.append(listItem);
 	}
