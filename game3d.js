@@ -1276,40 +1276,66 @@ function renderShopSellItems() {
 		listItem.append(makeShopItemInfo(item.kind, item.color, "눌러서 정보 보기"));
 		const controls = document.createElement("div");
 		controls.className = "shop-sell-controls";
+		
+		const quickSellButton = document.createElement("button");
+		quickSellButton.className = "shop-sell-button";
+		quickSellButton.type = "button";
+		quickSellButton.textContent = "판매 (15코인)";
+		quickSellButton.disabled = !supabaseClient || !item.id;
+		quickSellButton.addEventListener("click", async () => {
+			quickSellButton.disabled = true;
+			try {
+				const { error } = await supabaseClient.rpc("create_market_listing", { p_item_id: item.id, p_price: 15 });
+				if (error) throw error;
+				await reloadCurrentProfile();
+				await refreshShop();
+				shopStatus.textContent = "인형을 15코인으로 판매했어요. 코인이 즉시 지급됩니다.";
+				currentAccount.coins += 15;
+				coinsLabel.textContent = String(currentAccount.coins);
+			} catch (error) {
+				shopStatus.textContent = error.message.includes("create_market_listing")
+					? "상점 데이터베이스 설정이 필요해요. 최신 supabase/schema.sql을 실행해 주세요."
+					: error.message;
+				quickSellButton.disabled = false;
+			}
+		});
+		
 		const priceInput = document.createElement("input");
 		priceInput.className = "shop-price-input";
 		priceInput.type = "number";
 		priceInput.min = "1";
 		priceInput.max = "1000000";
 		priceInput.step = "1";
-		priceInput.value = "10";
-		priceInput.setAttribute("aria-label", "판매 가격, 코인");
-		const sellButton = document.createElement("button");
-		sellButton.className = "shop-sell-button";
-		sellButton.type = "button";
-		sellButton.textContent = "판매";
-		sellButton.disabled = !supabaseClient || !item.id;
-		sellButton.addEventListener("click", async () => {
+		priceInput.value = "20";
+		priceInput.setAttribute("aria-label", "거래 가격, 코인");
+		
+		const tradeButton = document.createElement("button");
+		tradeButton.className = "shop-sell-button";
+		tradeButton.type = "button";
+		tradeButton.textContent = "거래하기";
+		tradeButton.disabled = !supabaseClient || !item.id;
+		tradeButton.addEventListener("click", async () => {
 			const price = Number(priceInput.value);
 			if (!Number.isSafeInteger(price) || price < 1 || price > 1000000) {
 				shopStatus.textContent = "가격은 1~1,000,000코인 사이의 정수로 입력해 주세요.";
 				return;
 			}
-			sellButton.disabled = true;
+			tradeButton.disabled = true;
 			try {
 				const { error } = await supabaseClient.rpc("create_market_listing", { p_item_id: item.id, p_price: price });
 				if (error) throw error;
 				await reloadCurrentProfile();
 				await refreshShop();
-				shopStatus.textContent = "인형을 상점에 등록했어요.";
+				shopStatus.textContent = `인형을 ${price}코인으로 상점에 등록했어요.`;
 			} catch (error) {
 				shopStatus.textContent = error.message.includes("create_market_listing")
 					? "상점 데이터베이스 설정이 필요해요. 최신 supabase/schema.sql을 실행해 주세요."
 					: error.message;
-				sellButton.disabled = false;
+				tradeButton.disabled = false;
 			}
 		});
-		controls.append(priceInput, sellButton);
+		
+		controls.append(quickSellButton, priceInput, tradeButton);
 		listItem.append(controls);
 		shopSellItems.append(listItem);
 	}
