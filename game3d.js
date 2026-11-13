@@ -49,6 +49,11 @@ const cancelSellConfirmButton = document.querySelector("#cancelSellConfirm");
 const confirmSellButton = document.querySelector("#confirmSell");
 const prizeGate = document.querySelector("#rewardGate");
 const rouletteGate = document.querySelector("#rouletteGate");
+const casinoBetSelection = document.querySelector("#casinoBetSelection");
+const casinoWheel = document.querySelector("#casinoWheel");
+const betBlackButton = document.querySelector("#betBlack");
+const betRedButton = document.querySelector("#betRed");
+const betGreenButton = document.querySelector("#betGreen");
 const wheelCanvas = document.querySelector("#wheelCanvas");
 const spinButton = document.querySelector("#spinButton");
 const rouletteResult = document.querySelector("#rouletteResult");
@@ -56,7 +61,7 @@ const closeRouletteButton = document.querySelector("#closeRoulette");
 const rouletteBetInfo = document.querySelector("#rouletteBetInfo");
 const betToySwatch = document.querySelector("#betToySwatch");
 const betToyName = document.querySelector("#betToyName");
-const betToyMultiplier = document.querySelector("#betToyMultiplier");
+const betToyPrice = document.querySelector("#betToyPrice");
 const prizeCanvas = document.querySelector("#prizeCanvas");
 const prizeFireworks = document.querySelector("#prizeFireworks");
 const prizeTitleLabel = document.querySelector("#prizeTitle");
@@ -2401,11 +2406,14 @@ function openCasino(item, bagIndex) {
 		return;
 	}
 	
-	currentRouletteBet = { item, bagIndex };
+	currentRouletteBet = { item, bagIndex, selectedColor: null };
 	rouletteGate.hidden = false;
 	rouletteResult.innerHTML = "";
 	spinButton.disabled = false;
-	spinButton.textContent = "카지노 룰렛 시작";
+	
+	// Show color selection screen, hide wheel
+	casinoBetSelection.style.display = "block";
+	casinoWheel.style.display = "none";
 	
 	// 인형 정보 표시
 	if (item.color === "rainbow") betToySwatch.style.background = "linear-gradient(135deg, #e45b5b, #ed9159, #e9c64f, #68aa70, #6097d0, #595d9d, #9b69b4)";
@@ -2415,13 +2423,38 @@ function openCasino(item, bagIndex) {
 	// Get base price for the item
 	const basePrice = (item.kind === 'chizzilla' || item.kind === 'moonjaeger' || item.kind === 'mulcorita' || item.kind === 'moonkorita') ? 1000 : 15;
 	const currentPrice = item.roulletePrice || basePrice;
-	betToyMultiplier.textContent = `현재 가격: 💰 ${currentPrice}`;
+	betToyPrice.textContent = `현재 가격: 💰 ${currentPrice}`;
+	
+	// Reset button states
+	betBlackButton.style.opacity = "1";
+	betRedButton.style.opacity = "1";
+	betGreenButton.style.opacity = "1";
+	betBlackButton.disabled = false;
+	betRedButton.disabled = false;
+	betGreenButton.disabled = false;
 	
 	drawRoulette();
 }
 
+function selectBet(color) {
+	if (!currentRouletteBet) return;
+	
+	currentRouletteBet.selectedColor = color;
+	
+	// Update button states to show selection
+	betBlackButton.style.opacity = color === 'black' ? "1" : "0.5";
+	betRedButton.style.opacity = color === 'red' ? "1" : "0.5";
+	betGreenButton.style.opacity = color === 'green' ? "1" : "0.5";
+	
+	// Show wheel, hide color selection
+	casinoBetSelection.style.display = "none";
+	casinoWheel.style.display = "block";
+	rouletteResult.innerHTML = "";
+}
+
 // Alias for backward compatibility
 const openRoulette = openCasino;
+
 
 async function spinRoulette() {
 	if (!currentRouletteBet || isSpinning) return;
@@ -2456,38 +2489,38 @@ async function finishSpin(finalRotation) {
 	const segmentSize = 360 / 31;
 	const resultIndex = Math.floor((360 - normalizedRotation) / segmentSize) % 31;
 	
+	let resultColor = "";
 	let resultText = "";
-	let multiplier = 1;
-	let isWin = false;
+	let isMatch = false;
 	
-	// 카지노 결과: 블랙/레드는 2배, 초록은 15배, 꽝은 인형 잃기
+	// 룰렛 결과 색상 판정
 	if (resultIndex < 15) {
-		resultText = "⬛ 블랙! 승리!";
-		multiplier = 2;
-		isWin = true;
+		resultColor = "black";
+		resultText = "⬛ 블랙!";
 	} else if (resultIndex < 30) {
-		resultText = "🔴 레드! 승리!";
-		multiplier = 2;
-		isWin = true;
+		resultColor = "red";
+		resultText = "🔴 레드!";
 	} else {
-		resultText = "🟢 초록! 15배 대승리!";
-		multiplier = 15;
-		isWin = true;
+		resultColor = "green";
+		resultText = "🟢 초록!";
 	}
+	
+	// 배팅 색상과 결과 비교
+	isMatch = resultColor === currentRouletteBet.selectedColor;
 	
 	try {
 		spinButton.disabled = true;
 		
-		if (isWin) {
-			// 승리: 인형 가격 배수 증가 (블랙/레드=2배, 초록=15배)
+		if (isMatch) {
+			// 승리: 인형 가격 2배 증가 (모든 색상 동일)
 			const basePrice = (currentRouletteBet.item.kind === 'chizzilla' || 
 							   currentRouletteBet.item.kind === 'moonjaeger' || 
 							   currentRouletteBet.item.kind === 'mulcorita' || 
 							   currentRouletteBet.item.kind === 'moonkorita') ? 1000 : 15;
 			const currentPrice = currentRouletteBet.item.roulletePrice || basePrice;
-			const newPrice = currentPrice * multiplier;
+			const newPrice = currentPrice * 2;
 			
-			// Update item with multiplied price
+			// Update item with doubled price
 			const updatedItem = {
 				...currentRouletteBet.item,
 				roulletePrice: newPrice
@@ -2498,7 +2531,7 @@ async function finishSpin(finalRotation) {
 			saveCurrentAccount();
 			
 			rouletteResult.innerHTML = `
-				<p style="font-size: 14px; font-weight: 900; color: #4caf50; margin: 0 0 8px;">${resultText}</p>
+				<p style="font-size: 14px; font-weight: 900; color: #4caf50; margin: 0 0 8px;">${resultText} 맞췄어요!</p>
 				<p style="font-size: 12px; color: #74817b; margin: 0;">💰 ${currentPrice} → <span style="color: #4caf50; font-weight: bold;">${newPrice}</span></p>
 			`;
 		} else {
@@ -2507,7 +2540,8 @@ async function finishSpin(finalRotation) {
 			saveCurrentAccount();
 			
 			rouletteResult.innerHTML = `
-				<p style="font-size: 14px; font-weight: 900; color: #ed7863; margin: 0 0 8px;">패배! 인형을 잃었습니다 😢</p>
+				<p style="font-size: 14px; font-weight: 900; color: #ed7863; margin: 0 0 8px;">${resultText} 틀렸어요!</p>
+				<p style="font-size: 12px; color: #ed7863; margin: 0;">인형을 잃었습니다 😢</p>
 			`;
 		}
 		
@@ -2536,3 +2570,9 @@ closeRouletteButton.addEventListener("click", () => {
 document.querySelector("#closeRouletteBackdrop").addEventListener("click", () => {
 	if (!isSpinning) rouletteGate.hidden = true;
 });
+
+// 색상 선택 버튼
+betBlackButton.addEventListener("click", () => selectBet('black'));
+betRedButton.addEventListener("click", () => selectBet('red'));
+betGreenButton.addEventListener("click", () => selectBet('green'));
+
