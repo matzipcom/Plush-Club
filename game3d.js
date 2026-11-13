@@ -1303,9 +1303,9 @@ function renderShopSellItems() {
 		const tradeButton = document.createElement("button");
 		tradeButton.className = "shop-sell-button";
 		tradeButton.type = "button";
-		tradeButton.textContent = "거래하기 (25코인)";
+		tradeButton.textContent = "거래하기 (15코인)";
 		tradeButton.disabled = !supabaseClient || !item.id;
-		const tradePrice = 25;
+		const tradePrice = 15;
 		tradeButton.addEventListener("click", async () => {
 			tradeButton.disabled = true;
 			try {
