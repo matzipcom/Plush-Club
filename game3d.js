@@ -1290,7 +1290,10 @@ function renderShopSellItems() {
 		quickSellButton.addEventListener("click", async () => {
 			quickSellButton.disabled = true;
 			try {
-				const { error } = await supabaseClient.rpc("create_market_listing", { p_item_id: item.id, p_price: quickSellPrice });
+				const { error } = await supabaseClient
+					.from("items")
+					.delete()
+					.eq("id", item.id);
 				if (error) throw error;
 				await reloadCurrentProfile();
 				await refreshShop();
@@ -1298,9 +1301,9 @@ function renderShopSellItems() {
 				currentAccount.coins += quickSellPrice;
 				coinsLabel.textContent = String(currentAccount.coins);
 			} catch (error) {
-				shopStatus.textContent = error.message.includes("create_market_listing")
-					? "상점 데이터베이스 설정이 필요해요. 최신 supabase/schema.sql을 실행해 주세요."
-					: error.message;
+				shopStatus.textContent = error.message
+					? error.message
+					: "판매 중 오류가 발생했어요.";
 				quickSellButton.disabled = false;
 			}
 		});
