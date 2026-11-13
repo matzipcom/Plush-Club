@@ -477,6 +477,11 @@
 		.language-icon { font-size: 16px; line-height: 1; }
 		.language-select { width: 112px; height: 36px; padding: 0 9px; border: 1px solid #d4dacf; border-radius: 9px; color: var(--ink); background: #fffef9; font: inherit; font-size: 11px; }
 		.language-select:focus-visible { outline: 3px solid var(--coral); outline-offset: 2px; }
+		.version-badge { position: fixed; font-size: 10px; color: #a5b0a7; font-weight: 500; pointer-events: none; }
+		.version-badge.desktop { display: none; left: 12px; top: 12px; }
+		.version-badge.mobile { display: none; right: 12px; bottom: 12px; }
+		@media (min-width: 601px) { .version-badge.desktop { display: block; } }
+		@media (max-width: 600px) { .version-badge.mobile { display: block; } }
 		.site-information { border-top: 1px solid #d5dacd; color: var(--ink); background: #fffef9; }
 		.site-information-inner { width: min(100%, 1120px); margin: auto; padding: 46px clamp(18px, 4vw, 58px) 30px; }
 		.site-information-kicker { margin: 0 0 8px; color: #638174; font-size: 10px; font-weight: 900; }
@@ -544,6 +549,7 @@
 		:root[data-theme="dark"] .reward-art { border-color: #48564c; background: radial-gradient(circle at 50% 42%, #414b3f 0 28%, #242e29 78%); }
 		:root[data-theme="dark"] .reward-rotate-hint { border-color: #536158; color: var(--ink); background: #222b27dd; }
 		:root[data-theme="dark"] .hint.hint-coin-alert { border-color: #7b6547; color: #f2dfc0; background: #3a3028; }
+		:root[data-theme="dark"] .version-badge { color: #5a6b5e; }
 		@media (max-width: 600px) { .map-tab#mapPolitics { min-width: 0; } }
 	</style>
 	<script type="importmap">
@@ -551,6 +557,8 @@
 	</script>
 </head>
 <body>
+	<div class="version-badge desktop" aria-label="버전 정보">v26.11.13</div>
+	<div class="version-badge mobile" aria-label="버전 정보">v26.11.13</div>
 	<main class="arcade" aria-label="말랑말랑 인형뽑기 게임">
 		<header class="topbar">
 			<div class="brand">
