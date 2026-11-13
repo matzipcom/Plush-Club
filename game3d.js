@@ -2457,17 +2457,21 @@ async function finishSpin(finalRotation) {
 	const resultIndex = Math.floor((360 - normalizedRotation) / segmentSize) % 31;
 	
 	let resultText = "";
+	let multiplier = 1;
 	let isWin = false;
 	
-	// 카지노 결과: 승리는 2배, 패배는 인형 잃기
+	// 카지노 결과: 블랙/레드는 2배, 초록은 15배, 꽝은 인형 잃기
 	if (resultIndex < 15) {
 		resultText = "⬛ 블랙! 승리!";
+		multiplier = 2;
 		isWin = true;
 	} else if (resultIndex < 30) {
 		resultText = "🔴 레드! 승리!";
+		multiplier = 2;
 		isWin = true;
 	} else {
-		resultText = "🟢 초록! 대승리!";
+		resultText = "🟢 초록! 15배 대승리!";
+		multiplier = 15;
 		isWin = true;
 	}
 	
@@ -2475,15 +2479,15 @@ async function finishSpin(finalRotation) {
 		spinButton.disabled = true;
 		
 		if (isWin) {
-			// 승리: 인형 가격 2배 증가
+			// 승리: 인형 가격 배수 증가 (블랙/레드=2배, 초록=15배)
 			const basePrice = (currentRouletteBet.item.kind === 'chizzilla' || 
 							   currentRouletteBet.item.kind === 'moonjaeger' || 
 							   currentRouletteBet.item.kind === 'mulcorita' || 
 							   currentRouletteBet.item.kind === 'moonkorita') ? 1000 : 15;
 			const currentPrice = currentRouletteBet.item.roulletePrice || basePrice;
-			const newPrice = currentPrice * 2;
+			const newPrice = currentPrice * multiplier;
 			
-			// Update item with doubled price
+			// Update item with multiplied price
 			const updatedItem = {
 				...currentRouletteBet.item,
 				roulletePrice: newPrice
