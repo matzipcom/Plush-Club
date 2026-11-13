@@ -1277,20 +1277,25 @@ function renderShopSellItems() {
 		const controls = document.createElement("div");
 		controls.className = "shop-sell-controls";
 		
+		const rareToys = ["chizzilla", "mulcorita", "moonkorita"];
+		const isRareToy = rareToys.includes(item.kind);
+		const quickSellPrice = isRareToy ? 1000 : 15;
+		const tradePrice = isRareToy ? 1000 : 15;
+		
 		const quickSellButton = document.createElement("button");
 		quickSellButton.className = "shop-sell-button";
 		quickSellButton.type = "button";
-		quickSellButton.textContent = "판매 (15코인)";
+		quickSellButton.textContent = `판매 (${quickSellPrice}코인)`;
 		quickSellButton.disabled = !supabaseClient || !item.id;
 		quickSellButton.addEventListener("click", async () => {
 			quickSellButton.disabled = true;
 			try {
-				const { error } = await supabaseClient.rpc("create_market_listing", { p_item_id: item.id, p_price: 15 });
+				const { error } = await supabaseClient.rpc("create_market_listing", { p_item_id: item.id, p_price: quickSellPrice });
 				if (error) throw error;
 				await reloadCurrentProfile();
 				await refreshShop();
-				shopStatus.textContent = "인형을 15코인으로 판매했어요. 코인이 즉시 지급됩니다.";
-				currentAccount.coins += 15;
+				shopStatus.textContent = `인형을 ${quickSellPrice}코인으로 판매했어요. 코인이 즉시 지급됩니다.`;
+				currentAccount.coins += quickSellPrice;
 				coinsLabel.textContent = String(currentAccount.coins);
 			} catch (error) {
 				shopStatus.textContent = error.message.includes("create_market_listing")
@@ -1303,9 +1308,8 @@ function renderShopSellItems() {
 		const tradeButton = document.createElement("button");
 		tradeButton.className = "shop-sell-button";
 		tradeButton.type = "button";
-		tradeButton.textContent = "거래하기 (15코인)";
+		tradeButton.textContent = `거래하기 (${tradePrice}코인)`;
 		tradeButton.disabled = !supabaseClient || !item.id;
-		const tradePrice = 15;
 		tradeButton.addEventListener("click", async () => {
 			tradeButton.disabled = true;
 			try {
