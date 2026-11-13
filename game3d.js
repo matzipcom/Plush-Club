@@ -48,6 +48,15 @@ const closeSellConfirmButton = document.querySelector("#closeSellConfirm");
 const cancelSellConfirmButton = document.querySelector("#cancelSellConfirm");
 const confirmSellButton = document.querySelector("#confirmSell");
 const prizeGate = document.querySelector("#rewardGate");
+const rouletteGate = document.querySelector("#rouletteGate");
+const wheelCanvas = document.querySelector("#wheelCanvas");
+const spinButton = document.querySelector("#spinButton");
+const rouletteResult = document.querySelector("#rouletteResult");
+const closeRouletteButton = document.querySelector("#closeRoulette");
+const rouletteBetInfo = document.querySelector("#rouletteBetInfo");
+const betToySwatch = document.querySelector("#betToySwatch");
+const betToyName = document.querySelector("#betToyName");
+const betToyMultiplier = document.querySelector("#betToyMultiplier");
 const prizeCanvas = document.querySelector("#prizeCanvas");
 const prizeFireworks = document.querySelector("#prizeFireworks");
 const prizeTitleLabel = document.querySelector("#prizeTitle");
@@ -1143,7 +1152,9 @@ function renderBag() {
 	for (let index = currentAccount.bag.length - 1; index >= 0; index -= 1) {
 		const item = currentAccount.bag[index];
 		const listItem = document.createElement("li");
-		listItem.className = "bag-item-row";
+		listItem.className = "bag-item";
+		const itemRow = document.createElement("div");
+		itemRow.className = "bag-item-row";
 		const button = document.createElement("button");
 		button.type = "button";
 		button.className = "bag-item-button";
@@ -1160,7 +1171,21 @@ function renderBag() {
 		date.className = "bag-item-date";
 		date.textContent = new Date(item.collectedAt).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" });
 		button.append(swatch, name, date);
-		listItem.append(button);
+		itemRow.append(button);
+		
+		// 액션 버튼 추가
+		const actions = document.createElement("div");
+		actions.className = "bag-item-actions";
+		
+		const rouletteButton = document.createElement("button");
+		rouletteButton.type = "button";
+		rouletteButton.className = "bag-item-action-button";
+		rouletteButton.textContent = "룰렛";
+		rouletteButton.addEventListener("click", () => openRoulette(item, index));
+		actions.append(rouletteButton);
+		
+		itemRow.append(actions);
+		listItem.append(itemRow);
 		bagItems.append(listItem);
 	}
 }
@@ -2319,3 +2344,152 @@ window.setInterval(() => {
 	updateDailyBonusButton();
 }, 1000);
 requestAnimationFrame(animate);
+// Roulette Game
+let currentRouletteBet = null;
+let isSpinning = false;
+
+function drawRoulette() {
+	const ctx = wheelCanvas.getContext("2d");
+	const radius = wheelCanvas.width / 2;
+	ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
+	
+	// 블랙(0-14), 레드(15-29), 초록(30)
+	const segments = 31;
+	const colors = [];
+	for (let i = 0; i < 15; i++) colors.push("#1a1a1a"); // 블랙
+	for (let i = 0; i < 15; i++) colors.push("#d32f2f"); // 레드
+	colors.push("#4caf50"); // 초록
+	
+	for (let i = 0; i < segments; i++) {
+		const startAngle = (i / segments) * Math.PI * 2;
+		const endAngle = ((i + 1) / segments) * Math.PI * 2;
+		
+		ctx.fillStyle = colors[i];
+		ctx.beginPath();
+		ctx.moveTo(radius, radius);
+		ctx.arc(radius, radius, radius, startAngle, endAngle);
+		ctx.closePath();
+		ctx.fill();
+		
+		ctx.strokeStyle = "#fff";
+		ctx.lineWidth = 2;
+		ctx.stroke();
+	}
+	
+	// 테두리
+	ctx.strokeStyle = "#173a37";
+	ctx.lineWidth = 3;
+	ctx.beginPath();
+	ctx.arc(radius, radius, radius, 0, Math.PI * 2);
+	ctx.stroke();
+}
+
+function openRoulette(item, bagIndex) {
+	if (!supabaseClient || !currentAccount?.id) {
+		alert("Supabase 계정이 필요합니다.");
+		return;
+	}
+	
+	currentRouletteBet = { item, bagIndex };
+	rouletteGate.hidden = false;
+	rouletteResult.innerHTML = "";
+	spinButton.disabled = false;
+	spinButton.textContent = "룰렛 돌리기";
+	
+	// 인형 정보 표시
+	if (item.color === "rainbow") betToySwatch.style.background = "linear-gradient(135deg, #e45b5b, #ed9159, #e9c64f, #68aa70, #6097d0, #595d9d, #9b69b4)";
+	else betToySwatch.style.backgroundColor = /^#[0-9a-f]{6}$/i.test(item.color) ? item.color : "#a8d7bb";
+	betToyName.textContent = `${getColorName(item.color)} ${getToyName(item.kind)}인형`;
+	
+	drawRoulette();
+}
+
+async function spinRoulette() {
+	if (!currentRouletteBet || isSpinning) return;
+	
+	isSpinning = true;
+	spinButton.disabled = true;
+	rouletteResult.innerHTML = "";
+	
+	const wheel = document.querySelector("#rouletteWheel");
+	let rotation = Math.random() * 360;
+	const targetRotation = rotation + 3600 + Math.random() * 360;
+	const duration = 3000;
+	const startTime = Date.now();
+	
+	const spin = () => {
+		const elapsed = Date.now() - startTime;
+		const progress = Math.min(elapsed / duration, 1);
+		const easeOut = 1 - Math.pow(1 - progress, 3);
+		rotation = rotation + (targetRotation - rotation) * easeOut;
+		
+		wheel.style.transform = `rotate(${rotation}deg)`;
+		
+		if (progress < 1) requestAnimationFrame(spin);
+		else finishSpin(targetRotation);
+	};
+	
+	requestAnimationFrame(spin);
+}
+
+async function finishSpin(finalRotation) {
+	const normalizedRotation = ((finalRotation % 360) + 360) % 360;
+	const segmentSize = 360 / 31;
+	const resultIndex = Math.floor((360 - normalizedRotation) / segmentSize) % 31;
+	
+	let resultText = "";
+	let multiplier = 0;
+	
+	if (resultIndex < 15) {
+		resultText = "⬛ 블랙! 2배 승리!";
+		multiplier = 2;
+	} else if (resultIndex < 30) {
+		resultText = "🔴 레드! 2배 승리!";
+		multiplier = 2;
+	} else {
+		resultText = "🟢 초록! 15배 대승리!";
+		multiplier = 15;
+	}
+	
+	try {
+		spinButton.disabled = true;
+		const { data, error } = await supabaseClient.rpc("play_roulette", {
+			p_item_id: currentRouletteBet.item.id,
+			p_multiplier: multiplier
+		});
+		
+		if (error) {
+			console.error("룰렛 에러:", error);
+			rouletteResult.innerHTML = `<p style="color: #ed7863; font-weight: 900;">${error.message}</p>`;
+			spinButton.disabled = false;
+		} else {
+			const coinsWon = data.coins_won;
+			currentAccount.coins += coinsWon;
+			currentAccount.bag = currentAccount.bag.filter(i => i.id !== currentRouletteBet.item.id);
+			coinsLabel.textContent = String(currentAccount.coins);
+			
+			rouletteResult.innerHTML = `
+				<p style="font-size: 14px; font-weight: 900; color: #173a37; margin: 0 0 8px;">${resultText}</p>
+				<p style="font-size: 12px; color: #74817b; margin: 0;">🎁 ${coinsWon} 코인 획득!</p>
+			`;
+			
+			setTimeout(async () => {
+				await refreshBag();
+				rouletteGate.hidden = true;
+				isSpinning = false;
+			}, 2000);
+		}
+	} catch (err) {
+		console.error("룰렛 실패:", err);
+		rouletteResult.innerHTML = `<p style="color: #ed7863; font-weight: 900;">오류가 발생했습니다.</p>`;
+		spinButton.disabled = false;
+	}
+}
+
+spinButton.addEventListener("click", spinRoulette);
+closeRouletteButton.addEventListener("click", () => {
+	if (!isSpinning) rouletteGate.hidden = true;
+});
+document.querySelector("#closeRouletteBackdrop").addEventListener("click", () => {
+	if (!isSpinning) rouletteGate.hidden = true;
+});
