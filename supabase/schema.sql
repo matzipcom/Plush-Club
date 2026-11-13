@@ -501,3 +501,89 @@ $$;
 
 revoke all on function public.claim_daily_bonus() from public;
 grant execute on function public.claim_daily_bonus() to authenticated;
+
+create or replace function public.play_roulette(p_item_id uuid, p_multiplier integer)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_profile public.profiles%rowtype;
+  v_item jsonb;
+  v_position bigint;
+  v_item_price integer;
+  v_coins_won integer;
+  v_result_type text;
+  v_random_spin integer;
+begin
+  if v_user_id is null then
+    raise exception 'Authentication required';
+  end if;
+  
+  if p_multiplier is null or p_multiplier < 1 or p_multiplier > 15 then
+    raise exception 'Invalid multiplier';
+  end if;
+
+  select * into v_profile
+  from public.profiles
+  where id = v_user_id
+  for update;
+  if not found then
+    raise exception 'Profile not found';
+  end if;
+
+  select entry.item, entry.ordinality
+  into v_item, v_position
+  from jsonb_array_elements(v_profile.bag) with ordinality as entry(item, ordinality)
+  where entry.item ->> 'id' = p_item_id::text
+  limit 1;
+  if v_item is null then
+    raise exception 'This toy is no longer in your bag';
+  end if;
+
+  -- Get the base price for the toy kind
+  v_item_price := case v_item ->> 'kind'
+    when 'chizzilla' then 1000
+    when 'moonjaeger' then 1000
+    when 'mulcorita' then 1000
+    when 'moonkorita' then 1000
+    else 15
+  end;
+
+  v_random_spin := floor(random() * 31)::integer;
+
+  if v_random_spin < 15 then
+    v_result_type := 'black';
+    v_coins_won := v_item_price * p_multiplier;
+  elsif v_random_spin < 30 then
+    v_result_type := 'red';
+    v_coins_won := v_item_price * p_multiplier;
+  else
+    v_result_type := 'green';
+    v_coins_won := v_item_price * p_multiplier;
+  end if;
+
+  update public.profiles as profile
+  set bag = (
+    select coalesce(jsonb_agg(entry.item order by entry.ordinality), '[]'::jsonb)
+    from jsonb_array_elements(v_profile.bag) with ordinality as entry(item, ordinality)
+    where entry.ordinality <> v_position
+  ), 
+  coins = coins + v_coins_won,
+  updated_at = now()
+  where profile.id = v_user_id;
+
+  return jsonb_build_object(
+    'result', v_result_type,
+    'multiplier', p_multiplier,
+    'coins_won', v_coins_won,
+    'toy_kind', v_item ->> 'kind',
+    'toy_color', v_item ->> 'color'
+  );
+end;
+$$;
+
+revoke all on function public.play_roulette(uuid, integer) from public;
+grant execute on function public.play_roulette(uuid, integer) to authenticated;
