@@ -43,6 +43,10 @@ const shopListings = document.querySelector("#shopListings");
 const shopSellItems = document.querySelector("#shopSellItems");
 const closeShopButton = document.querySelector("#closeShop");
 const bagSummary = document.querySelector("#bagSummary");
+const sellConfirmGate = document.querySelector("#sellConfirmGate");
+const closeSellConfirmButton = document.querySelector("#closeSellConfirm");
+const cancelSellConfirmButton = document.querySelector("#cancelSellConfirm");
+const confirmSellButton = document.querySelector("#confirmSell");
 const prizeGate = document.querySelector("#rewardGate");
 const prizeCanvas = document.querySelector("#prizeCanvas");
 const prizeFireworks = document.querySelector("#prizeFireworks");
@@ -1288,24 +1292,51 @@ function renderShopSellItems() {
 		quickSellButton.textContent = `판매 (${quickSellPrice}코인)`;
 		quickSellButton.disabled = !supabaseClient || !item.id;
 		quickSellButton.addEventListener("click", async () => {
-			quickSellButton.disabled = true;
-			try {
-				const { error } = await supabaseClient
-					.from("items")
-					.delete()
-					.eq("id", item.id);
-				if (error) throw error;
-				await reloadCurrentProfile();
-				await refreshShop();
-				shopStatus.textContent = `인형을 ${quickSellPrice}코인으로 판매했어요. 코인이 즉시 지급됩니다.`;
-				currentAccount.coins += quickSellPrice;
-				coinsLabel.textContent = String(currentAccount.coins);
-			} catch (error) {
-				shopStatus.textContent = error.message
-					? error.message
-					: "판매 중 오류가 발생했어요.";
-				quickSellButton.disabled = false;
-			}
+			sellConfirmGate.hidden = false;
+			confirmSellButton.onclick = async () => {
+				confirmSellButton.disabled = true;
+				sellConfirmGate.hidden = true;
+				try {
+					if (!supabaseClient) {
+						throw new Error("Supabase 클라이언트가 초기화되지 않았습니다.");
+					}
+					if (!currentAccount?.id) {
+						throw new Error("프로필 정보가 없습니다.");
+					}
+					if (!item.id) {
+						throw new Error("인형 ID가 없습니다.");
+					}
+					
+					// RPC를 통해 아이템 판매
+					const { data, error } = await supabaseClient.rpc("sell_item", {
+						p_item_id: item.id,
+						p_sale_price: quickSellPrice
+					});
+					
+					if (error) {
+						console.error("Supabase RPC error:", error);
+						throw error;
+					}
+					
+					if (!data.success) {
+						throw new Error(data.error || "판매 중 오류가 발생했어요.");
+					}
+					
+					// 로컬 상태 업데이트
+					currentAccount.coins += quickSellPrice;
+					currentAccount.bag = currentAccount.bag.filter(i => i.id !== item.id);
+					coinsLabel.textContent = String(currentAccount.coins);
+					
+					await refreshShop();
+					shopStatus.textContent = `인형을 ${quickSellPrice}코인으로 판매했어요. 코인이 즉시 지급됩니다.`;
+				} catch (error) {
+					console.error("판매 오류:", error);
+					shopStatus.textContent = error.message
+						? error.message
+						: "판매 중 오류가 발생했어요.";
+					confirmSellButton.disabled = false;
+				}
+			};
 		});
 		
 		const tradeButton = document.createElement("button");

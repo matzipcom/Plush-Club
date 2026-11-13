@@ -672,6 +672,20 @@
 			</section>
 		</div>
 	</section>
+	<section class="bag-gate" id="sellConfirmGate" aria-label="판매 확인" aria-modal="true" role="dialog" hidden>
+		<button class="bag-backdrop" id="closeSellConfirmBackdrop" type="button" aria-label="취소"></button>
+		<div class="bag-panel" role="dialog" aria-modal="true" aria-labelledby="sellConfirmTitle">
+			<div class="bag-heading"><div><h2 id="sellConfirmTitle">판매를 하시겠습니까?</h2></div><button class="reset-button" id="closeSellConfirm" type="button" aria-label="취소">×</button></div>
+			<p style="margin: 0 0 16px; color: #718178; font-size: 12px; line-height: 1.6;">
+				판매를 하면 인형이 사라지고 코인이 지급됩니다.<br>
+				<strong style="color: #ed7863;">판매한 인형은 되돌릴 수 없습니다.</strong>
+			</p>
+			<div style="display: flex; gap: 8px;">
+				<button class="small-button" id="cancelSellConfirm" type="button" style="flex: 1;">취소</button>
+				<button class="small-button" id="confirmSell" type="button" style="flex: 1; background: #ed7863; color: #fffaf0; border-color: #ed7863;">판매하기</button>
+			</div>
+		</div>
+	</section>
 	<section class="reward-gate" id="rewardGate" aria-label="인형 획득 축하" aria-modal="true" role="dialog" hidden>
 		<div class="reward-panel">
 			<div class="reward-fireworks" id="prizeFireworks" aria-hidden="true"></div>
