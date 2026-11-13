@@ -1167,10 +1167,21 @@ function renderBag() {
 		name.className = "bag-item-name";
 		name.textContent = `${getColorName(item.color)} ${getToyName(item.kind)}인형`;
 		button.setAttribute("aria-label", `${name.textContent} 자세히 보기`);
+		
+		// Add roulette price display if available
+		const priceInfo = document.createElement("span");
+		priceInfo.style.fontSize = "11px";
+		priceInfo.style.color = "#f3cb68";
+		priceInfo.style.fontWeight = "700";
+		priceInfo.style.marginLeft = "8px";
+		if (item.roulletePrice) {
+			priceInfo.textContent = `💰 ${item.roulletePrice}`;
+		}
+		
 		const date = document.createElement("span");
 		date.className = "bag-item-date";
 		date.textContent = new Date(item.collectedAt).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" });
-		button.append(swatch, name, date);
+		button.append(swatch, name, priceInfo, date);
 		itemRow.append(button);
 		
 		// 액션 버튼 추가
@@ -2462,27 +2473,40 @@ async function finishSpin(finalRotation) {
 			console.error("룰렛 에러:", error);
 			rouletteResult.innerHTML = `<p style="color: #ed7863; font-weight: 900;">${error.message}</p>`;
 			spinButton.disabled = false;
+			isSpinning = false;
 		} else {
 			const coinsWon = data.coins_won;
-			currentAccount.coins += coinsWon;
-			currentAccount.bag = currentAccount.bag.filter(i => i.id !== currentRouletteBet.item.id);
-			coinsLabel.textContent = String(currentAccount.coins);
+			
+			// Update item with roulette price
+			const updatedItem = {
+				...currentRouletteBet.item,
+				roulletePrice: coinsWon
+			};
+			
+			// Update bag locally
+			currentAccount.bag[currentRouletteBet.bagIndex] = updatedItem;
 			
 			rouletteResult.innerHTML = `
 				<p style="font-size: 14px; font-weight: 900; color: #173a37; margin: 0 0 8px;">${resultText}</p>
-				<p style="font-size: 12px; color: #74817b; margin: 0;">🎁 ${coinsWon} 코인 획득!</p>
+				<p style="font-size: 12px; color: #74817b; margin: 0;">💰 ${coinsWon} 코인 획득!</p>
 			`;
 			
-			setTimeout(async () => {
-				await refreshBag();
-				rouletteGate.hidden = true;
-				isSpinning = false;
-			}, 2000);
+			// Use setTimeout without async, handle callback properly
+			await new Promise(resolve => {
+				setTimeout(() => {
+					refreshBag();
+					rouletteGate.hidden = true;
+					isSpinning = false;
+					spinButton.disabled = false;
+					resolve();
+				}, 2000);
+			});
 		}
 	} catch (err) {
 		console.error("룰렛 실패:", err);
 		rouletteResult.innerHTML = `<p style="color: #ed7863; font-weight: 900;">오류가 발생했습니다.</p>`;
 		spinButton.disabled = false;
+		isSpinning = false;
 	}
 }
 

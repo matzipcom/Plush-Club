@@ -517,6 +517,7 @@ declare
   v_coins_won integer;
   v_result_type text;
   v_random_spin integer;
+  v_updated_item jsonb;
 begin
   if v_user_id is null then
     raise exception 'Authentication required';
@@ -565,13 +566,20 @@ begin
     v_coins_won := v_item_price * p_multiplier;
   end if;
 
+  -- Update the item with price info instead of deleting it
+  v_updated_item := v_item || jsonb_build_object('roulletePrice', v_coins_won);
+
   update public.profiles as profile
   set bag = (
-    select coalesce(jsonb_agg(entry.item order by entry.ordinality), '[]'::jsonb)
+    select coalesce(jsonb_agg(
+      case 
+        when entry.ordinality = v_position then v_updated_item
+        else entry.item
+      end
+      order by entry.ordinality
+    ), '[]'::jsonb)
     from jsonb_array_elements(v_profile.bag) with ordinality as entry(item, ordinality)
-    where entry.ordinality <> v_position
-  ), 
-  coins = coins + v_coins_won,
+  ),
   updated_at = now()
   where profile.id = v_user_id;
 
