@@ -1184,16 +1184,16 @@ function renderBag() {
 		button.append(swatch, name, priceInfo, date);
 		itemRow.append(button);
 		
-		// 액션 버튼 추가
+		// 액션 버튼 추가 - 카지노 버튼만
 		const actions = document.createElement("div");
 		actions.className = "bag-item-actions";
 		
-		const rouletteButton = document.createElement("button");
-		rouletteButton.type = "button";
-		rouletteButton.className = "bag-item-action-button";
-		rouletteButton.textContent = "룰렛";
-		rouletteButton.addEventListener("click", () => openRoulette(item, index));
-		actions.append(rouletteButton);
+		const casinoButton = document.createElement("button");
+		casinoButton.type = "button";
+		casinoButton.className = "bag-item-action-button";
+		casinoButton.textContent = "🎰";
+		casinoButton.addEventListener("click", () => openCasino(item, index));
+		actions.append(casinoButton);
 		
 		itemRow.append(actions);
 		listItem.append(itemRow);
@@ -2395,7 +2395,7 @@ function drawRoulette() {
 	ctx.stroke();
 }
 
-function openRoulette(item, bagIndex) {
+function openCasino(item, bagIndex) {
 	if (!supabaseClient || !currentAccount?.id) {
 		alert("Supabase 계정이 필요합니다.");
 		return;
@@ -2405,15 +2405,23 @@ function openRoulette(item, bagIndex) {
 	rouletteGate.hidden = false;
 	rouletteResult.innerHTML = "";
 	spinButton.disabled = false;
-	spinButton.textContent = "룰렛 돌리기";
+	spinButton.textContent = "카지노 룰렛 시작";
 	
 	// 인형 정보 표시
 	if (item.color === "rainbow") betToySwatch.style.background = "linear-gradient(135deg, #e45b5b, #ed9159, #e9c64f, #68aa70, #6097d0, #595d9d, #9b69b4)";
 	else betToySwatch.style.backgroundColor = /^#[0-9a-f]{6}$/i.test(item.color) ? item.color : "#a8d7bb";
 	betToyName.textContent = `${getColorName(item.color)} ${getToyName(item.kind)}인형`;
 	
+	// Get base price for the item
+	const basePrice = (item.kind === 'chizzilla' || item.kind === 'moonjaeger' || item.kind === 'mulcorita' || item.kind === 'moonkorita') ? 1000 : 15;
+	const currentPrice = item.roulletePrice || basePrice;
+	betToyMultiplier.textContent = `현재 가격: 💰 ${currentPrice}`;
+	
 	drawRoulette();
 }
+
+// Alias for backward compatibility
+const openRoulette = openCasino;
 
 async function spinRoulette() {
 	if (!currentRouletteBet || isSpinning) return;
@@ -2424,8 +2432,8 @@ async function spinRoulette() {
 	
 	const wheel = document.querySelector("#rouletteWheel");
 	let rotation = Math.random() * 360;
-	const targetRotation = rotation + 3600 + Math.random() * 360;
-	const duration = 3000;
+	const targetRotation = rotation + 7200 + Math.random() * 360; // More rotations for longer animation
+	const duration = 7500; // 7.5 seconds
 	const startTime = Date.now();
 	
 	const spin = () => {
@@ -2449,61 +2457,68 @@ async function finishSpin(finalRotation) {
 	const resultIndex = Math.floor((360 - normalizedRotation) / segmentSize) % 31;
 	
 	let resultText = "";
-	let multiplier = 0;
+	let isWin = false;
 	
+	// 카지노 결과: 승리는 2배, 패배는 인형 잃기
 	if (resultIndex < 15) {
-		resultText = "⬛ 블랙! 2배 승리!";
-		multiplier = 2;
+		resultText = "⬛ 블랙! 승리!";
+		isWin = true;
 	} else if (resultIndex < 30) {
-		resultText = "🔴 레드! 2배 승리!";
-		multiplier = 2;
+		resultText = "🔴 레드! 승리!";
+		isWin = true;
 	} else {
-		resultText = "🟢 초록! 15배 대승리!";
-		multiplier = 15;
+		resultText = "🟢 초록! 대승리!";
+		isWin = true;
 	}
 	
 	try {
 		spinButton.disabled = true;
-		const { data, error } = await supabaseClient.rpc("play_roulette", {
-			p_item_id: currentRouletteBet.item.id,
-			p_multiplier: multiplier
-		});
 		
-		if (error) {
-			console.error("룰렛 에러:", error);
-			rouletteResult.innerHTML = `<p style="color: #ed7863; font-weight: 900;">${error.message}</p>`;
-			spinButton.disabled = false;
-			isSpinning = false;
-		} else {
-			const coinsWon = data.coins_won;
+		if (isWin) {
+			// 승리: 인형 가격 2배 증가
+			const basePrice = (currentRouletteBet.item.kind === 'chizzilla' || 
+							   currentRouletteBet.item.kind === 'moonjaeger' || 
+							   currentRouletteBet.item.kind === 'mulcorita' || 
+							   currentRouletteBet.item.kind === 'moonkorita') ? 1000 : 15;
+			const currentPrice = currentRouletteBet.item.roulletePrice || basePrice;
+			const newPrice = currentPrice * 2;
 			
-			// Update item with roulette price
+			// Update item with doubled price
 			const updatedItem = {
 				...currentRouletteBet.item,
-				roulletePrice: coinsWon
+				roulletePrice: newPrice
 			};
 			
 			// Update bag locally
 			currentAccount.bag[currentRouletteBet.bagIndex] = updatedItem;
+			saveCurrentAccount();
 			
 			rouletteResult.innerHTML = `
-				<p style="font-size: 14px; font-weight: 900; color: #173a37; margin: 0 0 8px;">${resultText}</p>
-				<p style="font-size: 12px; color: #74817b; margin: 0;">💰 ${coinsWon} 코인 획득!</p>
+				<p style="font-size: 14px; font-weight: 900; color: #4caf50; margin: 0 0 8px;">${resultText}</p>
+				<p style="font-size: 12px; color: #74817b; margin: 0;">💰 ${currentPrice} → <span style="color: #4caf50; font-weight: bold;">${newPrice}</span></p>
 			`;
+		} else {
+			// 패배: 인형 삭제
+			currentAccount.bag.splice(currentRouletteBet.bagIndex, 1);
+			saveCurrentAccount();
 			
-			// Use setTimeout without async, handle callback properly
-			await new Promise(resolve => {
-				setTimeout(() => {
-					refreshBag();
-					rouletteGate.hidden = true;
-					isSpinning = false;
-					spinButton.disabled = false;
-					resolve();
-				}, 2000);
-			});
+			rouletteResult.innerHTML = `
+				<p style="font-size: 14px; font-weight: 900; color: #ed7863; margin: 0 0 8px;">패배! 인형을 잃었습니다 😢</p>
+			`;
 		}
+		
+		// Use setTimeout without async, handle callback properly
+		await new Promise(resolve => {
+			setTimeout(() => {
+				refreshBag();
+				rouletteGate.hidden = true;
+				isSpinning = false;
+				spinButton.disabled = false;
+				resolve();
+			}, 2500);
+		});
 	} catch (err) {
-		console.error("룰렛 실패:", err);
+		console.error("카지노 실패:", err);
 		rouletteResult.innerHTML = `<p style="color: #ed7863; font-weight: 900;">오류가 발생했습니다.</p>`;
 		spinButton.disabled = false;
 		isSpinning = false;
