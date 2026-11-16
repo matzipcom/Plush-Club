@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ko">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="말랑말랑 인형뽑기의 전체 인형 도감. 동물 맵과 찢토피아 인형들의 무게, 난이도, 특징, 포획 요령을 한눈에 정리했습니다.">
+	<meta name="theme-color" content="#f2f1e9">
+	<meta name="google-adsense-account" content="ca-pub-6873890251417614">
+	<link rel="canonical" href="https://plush-club.pages.dev/plush">
+	<title>인형 도감 | 말랑말랑 인형뽑기</title>
+	<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6873890251417614" crossorigin="anonymous"></script>
+	<style>
+		:root { color-scheme: light; --ink: #173a37; --muted: #64736a; --line: #d7dfd5; --paper: #fffef9; }
+		* { box-sizing: border-box; }
+		body { margin: 0; color: var(--ink); background: #f7f6ef; font-family: "Trebuchet MS", "Malgun Gothic", sans-serif; }
+		a { color: #315c4d; text-underline-offset: 3px; }
+		a:hover { color: #a45b48; }
+		.site-header { border-bottom: 1px solid var(--line); background: var(--paper); }
+		.site-header-inner { width: min(100%, 980px); min-height: 66px; margin: auto; padding: 14px 22px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+		.brand { color: var(--ink); font: 700 17px Georgia, "Malgun Gothic", serif; text-decoration: none; }
+		.site-nav { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 11px; font-weight: 700; }
+		.document { width: min(100%, 860px); margin: 0 auto; padding: 48px 24px 70px; }
+		.kicker { margin: 0 0 10px; color: #638174; font-size: 10px; font-weight: 900; }
+		h1 { margin: 0; font: 700 32px/1.2 Georgia, "Malgun Gothic", serif; }
+		.lead { max-width: 700px; margin: 14px 0 0; color: var(--muted); font-size: 15px; line-height: 1.8; }
+		.document-section { margin-top: 34px; padding-top: 22px; border-top: 1px solid var(--line); }
+		h2 { margin: 0 0 12px; font: 700 20px/1.35 Georgia, "Malgun Gothic", serif; }
+		h3 { margin: 21px 0 7px; font-size: 14px; }
+		p, li { color: #53645a; font-size: 13px; line-height: 1.85; }
+		p { margin: 8px 0; }
+		ul { padding-left: 22px; }
+		li + li { margin-top: 5px; }
+		table { width: 100%; margin-top: 12px; border-collapse: collapse; font-size: 12px; }
+		caption { margin-bottom: 7px; color: #638174; font-size: 11px; font-weight: 800; text-align: left; }
+		th, td { padding: 8px 10px; border: 1px solid #dbe3d8; color: #53645a; line-height: 1.6; text-align: left; vertical-align: top; }
+		th { color: var(--ink); background: #f2f5ec; font-size: 11px; }
+		.plush-card { padding: 14px 0 4px; border-top: 1px solid #e0e5dc; }
+		.plush-card:first-of-type { border-top: 0; padding-top: 2px; }
+		.plush-card h3 { margin: 0 0 4px; }
+		.plush-meta { margin: 0 0 6px; color: #86948a; font-size: 11px; font-weight: 700; }
+		.plush-card p { margin: 4px 0; }
+		.site-footer { padding: 18px 24px 24px; border-top: 1px solid var(--line); text-align: center; }
+		.site-footer p { margin: 0; color: #748178; font-size: 10px; }
+		.site-footer nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 16px; margin-bottom: 10px; font-size: 10px; font-weight: 700; }
+		@media (max-width: 600px) { .site-header-inner { align-items: flex-start; flex-direction: column; gap: 10px; } .document { padding: 34px 20px 52px; } h1 { font-size: 27px; } }
+	</style>
+</head>
+<body>
+	<header class="site-header">
+		<div class="site-header-inner">
+			<a class="brand" href="/">말랑말랑 인형뽑기</a>
+			<nav class="site-nav" aria-label="사이트 메뉴">
+				<a href="/">게임</a>
+				<a href="/guide">이용 가이드</a>
+				<a href="/tips">공략 노트</a>
+				<a href="/updates">업데이트</a>
+				<a href="/about">소개</a>
+			</nav>
+		</div>
+	</header>
+	<main class="document">
+		<p class="kicker">PLUSH CLUB · ENCYCLOPEDIA</p>
+		<h1>인형 도감</h1>
+		<p class="lead">말랑말랑 인형뽑기에 등장하는 모든 인형의 기록입니다. 각 인형의 기본 무게는 게임의 포획 판정에 그대로 쓰이는 수치로, 무게가 높을수록 붙잡기 어렵고 끌어올리는 도중 미끄러질 확률이 높아집니다. 같은 종류라도 개체에 따라 무게가 최대 0.08까지 더해질 수 있습니다.</p>
+
+		<section class="document-section" id="weight-guide">
+			<h2>무게와 난이도 읽는 법</h2>
+			<p>도감의 무게는 0에서 1 사이의 값입니다. 경험적으로 다음과 같이 나눌 수 있습니다.</p>
+			<table>
+				<caption>무게 구간별 난이도 기준</caption>
+				<thead><tr><th scope="col">무게</th><th scope="col">난이도</th><th scope="col">체감</th></tr></thead>
+				<tbody>
+					<tr><td>0.30 ~ 0.45</td><td>쉬움</td><td>정렬이 다소 어긋나도 잡히는 편. 연습과 코인 수급에 적합.</td></tr>
+					<tr><td>0.46 ~ 0.70</td><td>보통</td><td>중심 정렬이 필요. 깊이 확인을 생략하면 자주 놓침.</td></tr>
+					<tr><td>0.71 ~ 0.85</td><td>어려움</td><td>정확한 정렬 + 미끄러짐 위험 감수. 코인 여유가 있을 때 도전.</td></tr>
+					<tr><td>0.86 이상</td><td>최상급</td><td>거의 완벽한 정렬이 필요하며 들고 가는 동안에도 긴장해야 함.</td></tr>
+				</tbody>
+			</table>
+		</section>
+
+		<section class="document-section" id="animals">
+			<h2>동물 맵 인형</h2>
+			<p>기본 맵에 사는 여섯 친구입니다. 잡힌 인형은 5분 뒤 재입고됩니다.</p>
+			<div class="plush-card">
+				<h3>병아리</h3>
+				<p class="plush-meta">기본 무게 0.30 · 난이도 쉬움</p>
+				<p>도감에서 가장 가벼운 인형. 집게 조작을 처음 익힐 때 가장 좋은 상대입니다. 몸이 작아 화면을 당겨서(확대) 정렬하는 습관을 들이면 좋습니다.</p>
+			</div>
+			<div class="plush-card">
+				<h3>오리</h3>
+				<p class="plush-meta">기본 무게 0.38 · 난이도 쉬움</p>
+				<p>병아리보다 한 단계 무겁지만 둥근 몸통 덕분에 집게가 안정적으로 걸립니다. 무료 충전 코인만으로도 부담 없이 모을 수 있습니다.</p>
+			</div>
+			<div class="plush-card">
+				<h3>토끼</h3>
+				<p class="plush-meta">기본 무게 0.52 · 난이도 보통</p>
+				<p>긴 귀가 함정입니다. 귀 쪽을 잡으면 중심이 어긋나 정렬 품질이 떨어지므로, 반드시 몸통 중앙을 노리세요.</p>
+			</div>
+			<div class="plush-card">
+				<h3>고양이</h3>
+				<p class="plush-meta">기본 무게 0.62 · 난이도 보통</p>
+				<p>동물 맵의 중간 보스 격. 이 인형부터는 측면 깊이 확인 없이 잡기 어렵습니다. 고양이를 안정적으로 잡을 수 있다면 조작이 손에 익었다는 뜻입니다.</p>
+			</div>
+			<div class="plush-card">
+				<h3>곰돌이</h3>
+				<p class="plush-meta">기본 무게 0.72 · 난이도 어려움</p>
+				<p>묵직한 인기 인형. 붙잡는 데 성공해도 출구로 가는 동안 미끄러지는 일이 잦습니다. 출구에서 가까운 개체를 골라 이동 거리를 줄이는 것이 핵심입니다.</p>
+			</div>
+			<div class="plush-card">
+				<h3>개구리</h3>
+				<p class="plush-meta">기본 무게 0.84 · 난이도 어려움</p>
+				<p>동물 맵 최고 무게. 완벽에 가까운 정렬이 아니면 집게가 들어 올리지 못합니다. 동물 맵의 졸업 시험이라 불러도 좋은 상대입니다.</p>
+			</div>
+		</section>
+
+		<section class="document-section" id="chizztopia">
+			<h2>찢토피아 인형</h2>
+			<p>1,000코인 입장권을 구매하면 들어갈 수 있는 특별 맵입니다. 개성 강한 캐릭터 인형들이 모여 있습니다.</p>
+			<div class="plush-card">
+				<h3>찢칠라</h3>
+				<p class="plush-meta">기본 무게 0.92 · 난이도 최상급 · 특수 행동: 도주</p>
+				<p>도감 전체에서 가장 무겁고, 유일하게 집게를 피해 움직이는 인형입니다. 쫓아가면 절대 잡을 수 없고, 도망칠 길목에 집게를 미리 보내 두는 예측 플레이가 필요합니다. 구체적인 길목 차단법은 <a href="/tips#chizzilla">공략 노트</a>에서 다룹니다.</p>
+			</div>
+			<div class="plush-card">
+				<h3>문코리타</h3>
+				<p class="plush-meta">기본 무게 0.74 · 난이도 어려움</p>
+				<p>전용 3D 모델로 등장하는 찢토피아의 간판 캐릭터. 곰돌이급 무게라 정렬과 미끄러짐 관리가 모두 필요합니다.</p>
+			</div>
+			<div class="plush-card">
+				<h3>대리석 문코리타</h3>
+				<p class="plush-meta">기본 무게 0.74 · 난이도 어려움</p>
+				<p>문코리타의 대리석 질감 변형판. 성능은 문코리타와 같지만 수집 가치로 찾는 플레이어가 많습니다.</p>
+			</div>
+			<div class="plush-card">
+				<h3>시장 후보 · 후보자</h3>
+				<p class="plush-meta">기본 무게 0.62~0.68 · 난이도 보통</p>
+				<p>찢토피아 입문용. 고양이와 비슷한 감각으로 공략할 수 있어, 입장권을 막 구매한 플레이어에게 추천합니다.</p>
+			</div>
+			<div class="plush-card">
+				<h3>의원 · 대변인 · 시의원</h3>
+				<p class="plush-meta">기본 무게 0.66~0.76 · 난이도 보통~어려움</p>
+				<p>중량급 캐릭터 라인. 개체마다 무게 편차가 있으니 여러 개가 보이면 출구에 가까운 쪽을 고르세요.</p>
+			</div>
+			<div class="plush-card">
+				<h3>외교관</h3>
+				<p class="plush-meta">기본 무게 0.58 · 난이도 보통</p>
+				<p>찢토피아에서 가장 가벼운 축. 찢토피아 코인 회수용으로 유용합니다.</p>
+			</div>
+			<div class="plush-card">
+				<h3>장관</h3>
+				<p class="plush-meta">기본 무게 0.82 · 난이도 어려움</p>
+				<p>개구리에 버금가는 무게. 찢칠라 도전 전 마지막 관문으로 삼기 좋은 상대입니다.</p>
+			</div>
+		</section>
+
+		<section class="document-section" id="collection-tip">
+			<h2>수집가를 위한 메모</h2>
+			<ul>
+				<li>로그인 상태에서 잡은 인형만 계정 가방에 영구 보관됩니다. 게스트 포획은 점수에만 반영됩니다.</li>
+				<li>인형은 다양한 색상으로 등장합니다. 같은 종류라도 색이 다르면 별개의 수집 대상으로 모으는 재미가 있습니다.</li>
+				<li>중복 인형은 상점에서 즉시 판매하거나 다른 회원과 거래할 수 있고, 룰렛에 베팅해 판매 가격을 올리는 도전도 가능합니다.</li>
+			</ul>
+			<p>포획 성공률을 높이는 구체적인 요령은 <a href="/tips">공략 노트</a>에서, 기본 규칙은 <a href="/guide">이용 가이드</a>에서 확인하세요.</p>
+		</section>
+	</main>
+	<footer class="site-footer">
+		<nav aria-label="사이트 링크">
+			<a href="/">게임</a>
+			<a href="/guide">이용 가이드</a>
+			<a href="/tips">공략 노트</a>
+			<a href="/plush">인형 도감</a>
+			<a href="/updates">업데이트</a>
+			<a href="/about">소개</a>
+			<a href="/terms">이용약관</a>
+			<a href="/privacy">개인정보처리방침</a>
+		</nav>
+		<p>PLUSH CLUB · 말랑말랑 인형뽑기</p>
+	</footer>
+</body>
+</html>

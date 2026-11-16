@@ -497,6 +497,34 @@
 		.site-information-links { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 28px; padding-top: 17px; border-top: 1px solid #e0e5dc; }
 		.site-information-links a { color: #315c4d; font-size: 11px; font-weight: 800; text-underline-offset: 3px; }
 		.site-information-links a:hover { color: #a45b48; }
+		.site-information-section { margin-top: 38px; padding-top: 24px; border-top: 1px solid #e0e5dc; }
+		.site-information-section h3 { margin: 0 0 10px; font: 700 19px/1.3 Georgia, "Malgun Gothic", serif; color: var(--ink); }
+		.site-information-section h4 { margin: 18px 0 6px; color: var(--ink); font-size: 13px; }
+		.site-information-section p, .site-information-section li { margin: 8px 0; color: #596c61; font-size: 13px; line-height: 1.85; }
+		.site-information-section ul, .site-information-section ol { margin: 8px 0; padding-left: 22px; }
+		.site-information-section li + li { margin-top: 5px; }
+		.site-information-section a { color: #315c4d; text-underline-offset: 3px; }
+		.site-information-section a:hover { color: #a45b48; }
+		.plush-table { width: 100%; margin-top: 12px; border-collapse: collapse; font-size: 12px; }
+		.plush-table caption { margin-bottom: 7px; color: #638174; font-size: 11px; font-weight: 800; text-align: left; }
+		.plush-table th, .plush-table td { padding: 8px 10px; border: 1px solid #dbe3d8; color: #596c61; line-height: 1.6; text-align: left; vertical-align: top; }
+		.plush-table th { color: var(--ink); background: #f2f5ec; font-size: 11px; }
+		.site-faq { padding: 12px 0; border-top: 1px solid #e7ebe2; }
+		.site-faq:first-of-type { border-top: 0; padding-top: 4px; }
+		.site-faq h4 { margin: 0 0 4px; }
+		.site-faq p { margin: 0; }
+		.update-entry { padding: 11px 0; border-top: 1px solid #e7ebe2; }
+		.update-entry:first-of-type { border-top: 0; padding-top: 4px; }
+		.update-entry h4 { margin: 0 0 4px; }
+		.update-entry time { color: #86948a; font-size: 11px; font-weight: 700; }
+		.update-entry p { margin: 4px 0 0; }
+		:root[data-theme="dark"] .site-information-section { border-color: #39463f; }
+		:root[data-theme="dark"] .site-information-section p, :root[data-theme="dark"] .site-information-section li, :root[data-theme="dark"] .plush-table td { color: #a5b0a7; }
+		:root[data-theme="dark"] .site-information-section a { color: #d3c28f; }
+		:root[data-theme="dark"] .plush-table th, :root[data-theme="dark"] .plush-table td { border-color: #46534b; }
+		:root[data-theme="dark"] .plush-table th { color: #e7ece6; background: #233029; }
+		:root[data-theme="dark"] .site-faq, :root[data-theme="dark"] .update-entry { border-color: #39463f; }
+		:root[data-theme="dark"] .update-entry time { color: #8b988d; }
 		.shop-item-info { padding: 0; border: 0; border-radius: 8px; color: var(--ink); background: transparent; box-shadow: none; font: inherit; text-align: left; cursor: pointer; }
 		.shop-item-info:hover { background: transparent; }
 		.shop-item-info:hover .shop-item-name { text-decoration: underline; text-underline-offset: 2px; }
@@ -759,8 +787,87 @@
 					<p>로그인한 계정은 획득한 인형을 가방에 보관할 수 있습니다. 게스트 플레이의 인형은 계정 가방에 저장되지 않습니다. 인형 상점 거래는 Supabase 계정으로 로그인한 경우에 이용할 수 있습니다.</p>
 				</article>
 			</div>
+			<section class="site-information-section" id="how-to-play">
+				<h3>처음 플레이하는 분들을 위한 안내</h3>
+				<p>말랑말랑 인형뽑기는 실제 오락실 인형뽑기 기계의 감각을 웹 브라우저에 옮긴 3D 게임입니다. 설치나 다운로드 없이 접속하자마자 플레이할 수 있고, 데스크톱과 모바일 어느 환경에서든 동일한 물리 엔진으로 동작합니다. 실제 기계처럼 집게의 악력과 인형의 무게가 결과에 영향을 주기 때문에, 단순히 버튼을 누르는 것보다 위치를 신중하게 잡는 쪽이 훨씬 유리합니다.</p>
+				<ol>
+					<li><strong>시점 돌리기:</strong> 화면을 마우스나 손가락으로 드래그하면 기계 주위를 돌면서 볼 수 있습니다. 인형뽑기에서 가장 흔한 실수는 정면에서만 보고 집게를 내리는 것입니다. 반드시 측면에서 앞뒤 깊이를 확인하세요.</li>
+					<li><strong>집게 이동:</strong> 화면 아래 조이스틱을 드래그하거나 키보드 방향키·WASD로 집게를 움직입니다. 조이스틱을 미는 정도에 따라 이동 속도가 달라지므로, 목표에 가까워지면 살짝만 밀어 미세 조정하세요.</li>
+					<li><strong>내려잡기:</strong> SPACE 키 또는 인형 뽑기 버튼을 누르면 집게가 내려갑니다. 집게가 인형의 중심에 가까울수록 악력이 좋아지고, 무거운 인형일수록 끌어올리는 도중 미끄러질 확률이 올라갑니다.</li>
+				</ol>
+				<p>포획에 실패해도 코인은 5분마다 5개씩 무료로 충전할 수 있어 부담 없이 연습할 수 있습니다. 자세한 조작법과 규칙은 <a href="/guide">이용 가이드</a>에서, 성공률을 올리는 요령은 <a href="/tips">공략 노트</a>에서 확인하세요.</p>
+			</section>
+			<section class="site-information-section" id="plush-roster">
+				<h3>어떤 인형을 만날 수 있나요?</h3>
+				<p>기계에는 두 개의 맵이 있습니다. 기본 맵인 <strong>동물 인형</strong>에는 여섯 종류의 동물 친구가 살고, 1,000코인으로 입장권을 구매하는 <strong>찢토피아</strong>에는 개성 강한 캐릭터 인형이 기다립니다. 인형마다 무게가 달라 난이도가 다르며, 같은 종류라도 개체에 따라 무게가 조금씩 다릅니다.</p>
+				<table class="plush-table">
+					<caption>동물 맵 인형과 체감 난이도</caption>
+					<thead><tr><th scope="col">인형</th><th scope="col">특징</th><th scope="col">난이도</th></tr></thead>
+					<tbody>
+						<tr><td>병아리</td><td>가장 가벼운 입문용 인형. 집게 연습 상대로 최적입니다.</td><td>쉬움</td></tr>
+						<tr><td>오리</td><td>병아리보다 약간 무겁지만 몸통이 둥글어 잡기 수월합니다.</td><td>쉬움</td></tr>
+						<tr><td>토끼</td><td>긴 귀 때문에 중심을 잘못 잡으면 집게가 헛돕니다.</td><td>보통</td></tr>
+						<tr><td>고양이</td><td>중간 무게. 몸통 중앙을 정확히 노려야 합니다.</td><td>보통</td></tr>
+						<tr><td>곰돌이</td><td>묵직한 인기 인형. 끌어올리는 동안 미끄러지기 쉽습니다.</td><td>어려움</td></tr>
+						<tr><td>개구리</td><td>동물 맵 최고 무게. 완벽한 정렬 없이는 거의 놓칩니다.</td><td>어려움</td></tr>
+					</tbody>
+				</table>
+				<p>찢토피아에는 집게가 다가오면 도망치는 <strong>찢칠라</strong>를 비롯해 문코리타, 대리석 문코리타, 시장 후보·의원·외교관·장관 같은 캐릭터 인형이 배치됩니다. 전체 인형의 무게 수치와 포획 요령은 <a href="/plush">인형 도감</a>에 정리되어 있습니다.</p>
+			</section>
+			<section class="site-information-section" id="strategy">
+				<h3>성공률을 올리는 세 가지 습관</h3>
+				<ul>
+					<li><strong>측면 확인을 먼저:</strong> 집게를 움직이기 전에 화면을 90도 돌려 측면에서 깊이를 확인하세요. 정면에서는 완벽해 보여도 앞뒤가 어긋난 경우가 대부분입니다.</li>
+					<li><strong>가벼운 인형부터:</strong> 코인이 적을 때는 병아리·오리처럼 가벼운 인형으로 감각을 익히고, 코인에 여유가 생기면 곰돌이·개구리에 도전하는 순서가 효율적입니다.</li>
+					<li><strong>움직이는 인형은 길목에서:</strong> 찢칠라는 집게를 피해 다니므로 쫓아가지 말고 이동 경로를 예상해 길목에 집게를 먼저 보내 두세요.</li>
+				</ul>
+				<p>집게 악력 계산 방식, 미끄러짐 확률, 코인 운용법까지 포함한 심화 내용은 <a href="/tips">공략 노트</a>에서 다룹니다.</p>
+			</section>
+			<section class="site-information-section" id="faq">
+				<h3>자주 묻는 질문</h3>
+				<div class="site-faq">
+					<h4>로그인하지 않아도 플레이할 수 있나요?</h4>
+					<p>네. 게스트로도 모든 맵을 플레이할 수 있습니다. 다만 게스트로 잡은 인형은 계정 가방에 저장되지 않고, 코인과 진행 상황이 현재 브라우저에만 보관됩니다. 인형을 모으고 상점에서 거래하려면 무료 계정으로 로그인하세요.</p>
+				</div>
+				<div class="site-faq">
+					<h4>집게가 인형 위에 있는데 왜 못 잡나요?</h4>
+					<p>화면 정면에서 보면 겹쳐 보여도 앞뒤 깊이가 어긋나 있을 가능성이 높습니다. 시점을 돌려 측면에서 확인해 보세요. 또한 곰돌이·개구리·찢칠라처럼 무거운 인형은 집게가 정확해도 끌어올리는 도중 미끄러질 수 있습니다.</p>
+				</div>
+				<div class="site-faq">
+					<h4>코인이 떨어지면 어떻게 하나요?</h4>
+					<p>코인 받기 버튼으로 5분마다 5개씩 무료로 받을 수 있고, 로그인 사용자는 24시간마다 일일 보너스 200코인을 추가로 받을 수 있습니다. 가방의 인형을 상점에 판매해 코인을 모으는 방법도 있습니다.</p>
+				</div>
+				<div class="site-faq">
+					<h4>찢토피아는 무엇인가요?</h4>
+					<p>동물 맵과 별개의 특별 맵입니다. 1,000코인으로 입장권을 한 번 구매하면 이후에는 추가 비용 없이 자유롭게 오갈 수 있으며, 도망 다니는 찢칠라와 캐릭터 인형들에 도전할 수 있습니다.</p>
+				</div>
+			</section>
+			<section class="site-information-section" id="news">
+				<h3>최근 업데이트 소식</h3>
+				<div class="update-entry">
+					<h4>카지노 룰렛 추가</h4>
+					<time datetime="2026-11-13">2026년 11월 13일</time>
+					<p>가방의 인형으로 참여하는 색상 베팅 룰렛이 추가되었습니다. 색상을 맞추면 인형의 판매 가격이 배로 오르고, 초록을 맞추면 15배 보상이 적용됩니다.</p>
+				</div>
+				<div class="update-entry">
+					<h4>상점 판매·거래 기능 개편</h4>
+					<time datetime="2026-11-13">2026년 11월 13일</time>
+					<p>즉시 판매와 회원 간 거래가 분리되었고, 판매 확인 창과 가방·상점 화면 디자인이 개선되었습니다.</p>
+				</div>
+				<div class="update-entry">
+					<h4>일일 보너스 도입</h4>
+					<time datetime="2026-11-12">2026년 11월 12일</time>
+					<p>로그인 사용자는 24시간마다 200코인의 일일 보너스를 받을 수 있게 되었습니다. 다크 모드의 기계 조명도 함께 개선되었습니다.</p>
+				</div>
+				<p>전체 변경 내역은 <a href="/updates">업데이트 노트</a>에서 확인할 수 있습니다.</p>
+			</section>
 			<nav class="site-information-links" aria-label="사이트 안내">
-				<a href="/guide">전체 이용 가이드</a>
+				<a href="/guide">이용 가이드</a>
+				<a href="/tips">공략 노트</a>
+				<a href="/plush">인형 도감</a>
+				<a href="/updates">업데이트 노트</a>
+				<a href="/about">서비스 소개</a>
+				<a href="/terms">이용약관</a>
 				<a href="/privacy">개인정보처리방침</a>
 				<a href="https://www.instagram.com/9sept10th/" target="_blank" rel="noopener noreferrer">서비스 문의 (Instagram 새 탭)</a>
 			</nav>

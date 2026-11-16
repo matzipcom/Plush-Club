@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="말랑말랑 인형뽑기 심화 공략. 집게 악력과 미끄러짐 구조, 깊이 확인 요령, 인형별 공략 순서, 찢칠라 길목 차단법, 코인 운용 전략을 정리했습니다.">
+	<meta name="theme-color" content="#f2f1e9">
+	<meta name="google-adsense-account" content="ca-pub-6873890251417614">
+	<link rel="canonical" href="https://plush-club.pages.dev/tips">
+	<title>공략 노트 | 말랑말랑 인형뽑기</title>
+	<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6873890251417614" crossorigin="anonymous"></script>
+	<style>
+		:root { color-scheme: light; --ink: #173a37; --muted: #64736a; --line: #d7dfd5; --paper: #fffef9; }
+		* { box-sizing: border-box; }
+		body { margin: 0; color: var(--ink); background: #f7f6ef; font-family: "Trebuchet MS", "Malgun Gothic", sans-serif; }
+		a { color: #315c4d; text-underline-offset: 3px; }
+		a:hover { color: #a45b48; }
+		.site-header { border-bottom: 1px solid var(--line); background: var(--paper); }
+		.site-header-inner { width: min(100%, 980px); min-height: 66px; margin: auto; padding: 14px 22px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+		.brand { color: var(--ink); font: 700 17px Georgia, "Malgun Gothic", serif; text-decoration: none; }
+		.site-nav { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 11px; font-weight: 700; }
+		.document { width: min(100%, 860px); margin: 0 auto; padding: 48px 24px 70px; }
+		.kicker { margin: 0 0 10px; color: #638174; font-size: 10px; font-weight: 900; }
+		h1 { margin: 0; font: 700 32px/1.2 Georgia, "Malgun Gothic", serif; }
+		.lead { max-width: 700px; margin: 14px 0 0; color: var(--muted); font-size: 15px; line-height: 1.8; }
+		.document-section { margin-top: 34px; padding-top: 22px; border-top: 1px solid var(--line); }
+		h2 { margin: 0 0 12px; font: 700 20px/1.35 Georgia, "Malgun Gothic", serif; }
+		h3 { margin: 21px 0 7px; font-size: 14px; }
+		p, li { color: #53645a; font-size: 13px; line-height: 1.85; }
+		p { margin: 8px 0; }
+		ol, ul { padding-left: 22px; }
+		li + li { margin-top: 5px; }
+		kbd { padding: 2px 6px; border: 1px solid #ccd5ca; border-bottom-width: 2px; border-radius: 4px; color: var(--ink); background: #fffef9; font: inherit; font-size: 11px; font-weight: 600; }
+		table { width: 100%; margin-top: 12px; border-collapse: collapse; font-size: 12px; }
+		caption { margin-bottom: 7px; color: #638174; font-size: 11px; font-weight: 800; text-align: left; }
+		th, td { padding: 8px 10px; border: 1px solid #dbe3d8; color: #53645a; line-height: 1.6; text-align: left; vertical-align: top; }
+		th { color: var(--ink); background: #f2f5ec; font-size: 11px; }
+		.site-footer { padding: 18px 24px 24px; border-top: 1px solid var(--line); text-align: center; }
+		.site-footer p { margin: 0; color: #748178; font-size: 10px; }
+		.site-footer nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 16px; margin-bottom: 10px; font-size: 10px; font-weight: 700; }
+		@media (max-width: 600px) { .site-header-inner { align-items: flex-start; flex-direction: column; gap: 10px; } .document { padding: 34px 20px 52px; } h1 { font-size: 27px; } }
+		@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
+	</style>
+</head>
+<body>
+	<header class="site-header">
+		<div class="site-header-inner">
+			<a class="brand" href="/">말랑말랑 인형뽑기</a>
+			<nav class="site-nav" aria-label="사이트 메뉴">
+				<a href="/">게임</a>
+				<a href="/guide">이용 가이드</a>
+				<a href="/plush">인형 도감</a>
+				<a href="/updates">업데이트</a>
+				<a href="/about">소개</a>
+			</nav>
+		</div>
+	</header>
+	<main class="document">
+		<p class="kicker">PLUSH CLUB · STRATEGY</p>
+		<h1>공략 노트: 집게를 이기는 법</h1>
+		<p class="lead">말랑말랑 인형뽑기는 운에만 기대는 게임이 아닙니다. 집게 악력, 인형의 무게, 미끄러짐 판정이 명확한 규칙으로 동작하기 때문에, 구조를 이해하면 같은 코인으로 훨씬 많은 인형을 데려올 수 있습니다. 이 글은 실제 게임 로직을 바탕으로 작성한 심화 공략입니다.</p>
+
+		<section class="document-section" id="grip-system">
+			<h2>1. 포획 판정은 이렇게 동작합니다</h2>
+			<p>집게가 내려가 인형을 붙잡으면 게임은 두 단계로 성공 여부를 계산합니다.</p>
+			<h3>악력 판정 — 얼마나 정확히 잡았는가</h3>
+			<p>집게가 인형의 중심에 가까울수록 <strong>정렬 품질</strong>이 높아집니다. 정렬 품질은 제곱으로 반영되기 때문에, 중심에서 조금만 벗어나도 성공률이 크게 떨어집니다. 예를 들어 정렬이 90%라면 악력 기여는 81%지만, 정렬이 70%로 내려가면 49%까지 급감합니다. "거의 맞았으니 되겠지"가 통하지 않는 이유입니다.</p>
+			<h3>무게 보정 — 인형이 얼마나 무거운가</h3>
+			<p>인형의 무게는 악력 판정과 미끄러짐 판정 양쪽에 영향을 줍니다. 무거운 인형일수록 처음 붙잡을 확률이 낮아지고, 붙잡았더라도 출구로 옮기는 동안 미끄러져 떨어질 확률이 올라갑니다. 무게 0.3의 병아리와 0.84의 개구리는 같은 정렬이라도 체감 난이도가 전혀 다릅니다.</p>
+			<h3>미끄러짐 판정 — 끝까지 버티는가</h3>
+			<p>집게가 인형을 들고 출구로 이동하는 동안 미끄러짐 확률이 별도로 적용됩니다. 이 확률은 인형 무게와 정렬 품질에 따라 최소 8%에서 최대 72%까지 변합니다. 무거운 인형을 어설프게 잡으면 들어 올리는 데 성공해도 대부분 도중에 놓칩니다. 반대로 가벼운 인형을 정확히 잡으면 미끄러짐은 거의 걱정할 필요가 없습니다.</p>
+		</section>
+
+		<section class="document-section" id="depth">
+			<h2>2. 깊이 확인: 성공률을 가장 크게 바꾸는 습관</h2>
+			<p>초보와 숙련자의 차이는 대부분 <strong>앞뒤 깊이 확인</strong>에서 갈립니다. 화면 정면에서 집게와 인형이 겹쳐 보여도, 실제로는 집게가 인형보다 앞이나 뒤에 있는 경우가 많습니다.</p>
+			<ol>
+				<li>목표 인형을 정한 뒤, 집게를 움직이기 전에 화면을 드래그해 <strong>측면(약 90도)</strong>으로 시점을 돌립니다.</li>
+				<li>측면에서 집게와 인형의 앞뒤 간격을 확인하고, 조이스틱을 짧게 밀어 깊이를 먼저 맞춥니다.</li>
+				<li>다시 정면 근처로 시점을 돌려 좌우를 맞춥니다. 위에서 내려다보는 각도로 조절하면 좌우 정렬이 더 잘 보입니다.</li>
+				<li>마지막으로 한 번 더 측면을 확인한 뒤 <kbd>SPACE</kbd>를 누릅니다.</li>
+			</ol>
+			<p>이 "측면 → 정면 → 측면" 확인 순서를 습관으로 만들면 코인 소모가 눈에 띄게 줄어듭니다. 확대/축소 버튼으로 화면을 당겨 보면 미세한 어긋남도 찾아낼 수 있습니다.</p>
+		</section>
+
+		<section class="document-section" id="order">
+			<h2>3. 인형별 공략 순서와 요령</h2>
+			<table>
+				<caption>무게 기준 공략 난이도 (낮을수록 잡기 쉬움)</caption>
+				<thead><tr><th scope="col">단계</th><th scope="col">인형</th><th scope="col">요령</th></tr></thead>
+				<tbody>
+					<tr><td>입문</td><td>병아리 · 오리</td><td>정렬이 조금 어긋나도 잡힙니다. 조이스틱 미세 조정과 깊이 확인을 연습하는 단계로 활용하세요.</td></tr>
+					<tr><td>중급</td><td>토끼 · 고양이</td><td>몸통 중심을 노리세요. 토끼는 귀가 길어 머리 쪽을 잡으면 중심이 어긋나기 쉽습니다.</td></tr>
+					<tr><td>상급</td><td>곰돌이 · 개구리</td><td>완벽한 정렬이 필요합니다. 측면 확인을 두 번 이상 하고, 미끄러짐을 감안해 코인에 여유가 있을 때 도전하세요.</td></tr>
+					<tr><td>특수</td><td>찢칠라</td><td>집게가 다가가면 도망칩니다. 아래 길목 차단법을 참고하세요.</td></tr>
+				</tbody>
+			</table>
+			<p>같은 종류의 인형이라도 개체마다 무게가 조금씩 다르게 배치됩니다. 여러 마리가 있다면 구석보다 <strong>이동 거리가 짧은 출구 근처 개체</strong>를 노리는 편이 미끄러짐 위험을 줄입니다.</p>
+		</section>
+
+		<section class="document-section" id="chizzilla">
+			<h2>4. 찢칠라 길목 차단법</h2>
+			<p>찢토피아의 찢칠라는 집게가 접근하면 반대 방향으로 도망치는 특수 인형입니다. 쫓아가며 잡으려 하면 코인만 소모됩니다.</p>
+			<ol>
+				<li>먼저 시점을 돌려 찢칠라의 현재 위치와 주변 공간을 파악합니다. 찢칠라는 벽 쪽으로 몰리면 방향을 꺾습니다.</li>
+				<li>찢칠라를 따라가지 말고, <strong>도망칠 방향의 길목</strong>에 집게를 먼저 보내 둡니다.</li>
+				<li>찢칠라가 집게 아래 범위로 들어오는 순간 <kbd>SPACE</kbd>를 누릅니다. 집게가 내려가는 시간을 감안해 반 박자 일찍 누르는 것이 요령입니다.</li>
+			</ol>
+			<p>찢칠라는 무게도 0.92로 전체 인형 중 가장 무겁습니다. 길목을 맞혔더라도 정렬이 어긋나면 미끄러질 확률이 높으니, 코인에 여유가 있을 때 도전하세요.</p>
+		</section>
+
+		<section class="document-section" id="economy">
+			<h2>5. 코인 운용 전략</h2>
+			<ul>
+				<li><strong>무료 충전 주기 활용:</strong> 코인 받기는 5분마다 5개입니다. 플레이 사이에 충전 버튼의 남은 시간을 확인하고, 충전 직후에 어려운 인형에 도전하면 실패 부담이 적습니다.</li>
+				<li><strong>일일 보너스 먼저:</strong> 로그인 사용자는 24시간마다 200코인을 받을 수 있습니다. 접속하면 가장 먼저 일일 보너스를 수령하세요.</li>
+				<li><strong>재입고 시간 계산:</strong> 동물 맵 인형은 잡힌 뒤 5분 후 재입고됩니다. 원하는 인형이 비어 있으면 그 시간에 다른 맵이나 가벼운 인형으로 코인 효율을 유지하세요.</li>
+				<li><strong>찢토피아 입장권은 투자:</strong> 1,000코인이 부담스러울 수 있지만 한 번 구매하면 영구적으로 무료 입장입니다. 찢토피아 전용 인형을 모을 계획이라면 일찍 사 둘수록 이득입니다.</li>
+				<li><strong>상점 판매로 회수:</strong> 중복으로 잡은 인형은 상점에서 판매해 코인으로 되돌릴 수 있습니다. 룰렛으로 판매 가격을 올리는 도전도 가능하지만, 실패 위험이 있으니 여분의 인형으로만 시도하세요.</li>
+			</ul>
+		</section>
+
+		<section class="document-section" id="checklist">
+			<h2>6. 뽑기 직전 체크리스트</h2>
+			<ol>
+				<li>측면에서 앞뒤 깊이를 확인했는가?</li>
+				<li>집게가 인형의 <strong>중심</strong>(귀나 팔이 아닌 몸통)을 향하는가?</li>
+				<li>무거운 인형이라면 지금 코인 여유가 있는가?</li>
+				<li>출구에서 먼 개체보다 가까운 개체를 고를 수 있는가?</li>
+			</ol>
+			<p>네 가지에 모두 "예"라고 답할 수 있을 때 버튼을 누르세요. 기본 조작이 익숙하지 않다면 <a href="/guide">이용 가이드</a>를, 인형별 무게 수치는 <a href="/plush">인형 도감</a>을 참고하세요.</p>
+		</section>
+	</main>
+	<footer class="site-footer">
+		<nav aria-label="사이트 링크">
+			<a href="/">게임</a>
+			<a href="/guide">이용 가이드</a>
+			<a href="/tips">공략 노트</a>
+			<a href="/plush">인형 도감</a>
+			<a href="/updates">업데이트</a>
+			<a href="/about">소개</a>
+			<a href="/terms">이용약관</a>
+			<a href="/privacy">개인정보처리방침</a>
+		</nav>
+		<p>PLUSH CLUB · 말랑말랑 인형뽑기</p>
+	</footer>
+</body>
+</html>
