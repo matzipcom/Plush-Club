@@ -3,6 +3,10 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_AUTH_REDIRECT_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./supabase-config.js";
 import { setupLanguageSelector, translate } from "./i18n.js";
+import {
+	CLAW_TUNING, FLOOR_Y, BOUNDS, CHUTE, createBody, createSwing, gripLoad, gripStrength, isOverChute,
+	kickSwing, sampleClawPower, stepBody, stepGantryToward, stepGantryVelocity, stepSlip, stepSwing,
+} from "./physics.js";
 
 setupLanguageSelector();
 
@@ -715,6 +719,7 @@ function switchMap(mapId) {
 	clawState.x = -3.35;
 	clawState.z = 0;
 	clawState.cable = 0;
+	resetClawPhysics();
 	updateClaw(0);
 	updateRestockStatus();
 	status.textContent = activeMapId === "politics" ? "찢토피아로 이동했어요." : "동물 인형으로 이동했어요.";
@@ -839,10 +844,12 @@ const carriage = new THREE.Group();
 gantry.add(carriage);
 box(carriage, [0.92, 0.28, 0.7], [0, -0.04, 0], mats.frame);
 box(carriage, [0.56, 0.12, 0.46], [0, -0.22, 0], mats.gold);
+const swingPivot = new THREE.Group();
+carriage.add(swingPivot);
 const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1, 12), mats.metal);
-carriage.add(cable);
+swingPivot.add(cable);
 const claw = new THREE.Group();
-carriage.add(claw);
+swingPivot.add(claw);
 sphere(claw, [0, 0, 0], [0.22, 0.12, 0.22], mats.metal, 18);
 sphere(claw, [0, -0.16, 0], [0.14, 0.12, 0.14], mats.gold, 18);
 const fingers = [];
@@ -859,9 +866,25 @@ for (let index = 0; index < 3; index += 1) {
 }
 
 const clawState = {
-	x: -3.35, z: 0, cable: 0, mode: "ready", target: null, delivered: false,
-	modeTime: 0, gripQuality: 0, slipAt: Infinity, carriedTime: 0, fallVelocity: 0,
+	x: -3.35, z: 0, vx: 0, vz: 0, cable: 0, mode: "ready", target: null, delivered: false,
+	modeTime: 0, gripQuality: 0, swing: createSwing(), cableSpeed: 0, strength: 0, slip: 0, shake: 0,
+	grabbed: false, slack: 0, contactX: 0, contactZ: 0, holdX: 0, holdZ: 0, failMessage: "",
+	releasedToy: null, holdVelocity: new THREE.Vector3(), lastHang: new THREE.Vector3(), hasLastHang: false,
 };
+const hangPoint = new THREE.Vector3();
+
+function resetClawPhysics() {
+	clawState.vx = 0;
+	clawState.vz = 0;
+	clawState.swing = createSwing();
+	clawState.cableSpeed = 0;
+	clawState.slip = 0;
+	clawState.shake = 0;
+	clawState.grabbed = false;
+	clawState.releasedToy = null;
+	clawState.hasLastHang = false;
+	clawState.failMessage = "";
+}
 const keys = new Set();
 const clock = new THREE.Clock();
 const joystickVector = { x: 0, z: 0 };
@@ -1637,11 +1660,19 @@ async function beginDrop() {
 		saveGuestCoins();
 		guestCoinsLabel.textContent = String(guestCoins);
 	}
+	kickSwing(clawState.swing, -clawState.vx, -clawState.vz, clawState.cable + CLAW_TUNING.armLength);
+	clawState.vx = 0;
+	clawState.vz = 0;
 	clawState.mode = "drop";
 	clawState.target = null;
 	clawState.delivered = false;
+	clawState.grabbed = false;
+	clawState.releasedToy = null;
 	clawState.modeTime = 0;
-	clawState.slipAt = Infinity;
+	clawState.slip = 0;
+	clawState.shake = 0;
+	clawState.cableSpeed = 0;
+	clawState.failMessage = "";
 	setBusy(true);
 	status.textContent = "집게가 내려가요. 앞뒤 위치도 잘 맞춰 보세요.";
 }
@@ -1650,70 +1681,213 @@ function finishRound() {
 	clawState.mode = "ready";
 	clawState.target = null;
 	clawState.cable = 0;
-	clawState.z = 0;
+	clawState.vx = 0;
+	clawState.vz = 0;
 	if (!clawState.delivered) status.textContent = "아깝다! 인형 위에 집게를 맞춰 다시 해봐요.";
 	clawState.delivered = false;
 	setBusy(false);
 }
 
+function pendulumLength() {
+	const loaded = clawState.target && clawState.grabbed;
+	return clawState.cable + CLAW_TUNING.armLength + (loaded ? CLAW_TUNING.hangDepth * 0.6 : 0);
+}
+
+function clawTip() {
+	const length = clawState.cable + CLAW_TUNING.armLength;
+	return {
+		x: clawState.x + length * Math.sin(clawState.swing.x),
+		z: clawState.z + length * Math.sin(clawState.swing.z),
+	};
+}
+
+function isAirborne(toy) {
+	return Boolean(toy.body && (toy.body.captured || toy.body.y > FLOOR_Y + 0.25));
+}
+
+function launchToy(toy, velocity) {
+	const { position, rotation, scale } = toy.group;
+	toy.body = createBody({
+		x: position.x, y: position.y, z: position.z,
+		vx: velocity.x, vy: velocity.y, vz: velocity.z,
+		tiltX: rotation.x, tiltZ: rotation.z,
+	});
+	toy.body.baseYaw = rotation.y;
+	toy.body.squash = THREE.MathUtils.clamp(1 - scale.y / toy.baseScale, -0.15, 0.3);
+}
+
+function nudgeToy(toy, fromX, fromZ, strength) {
+	if (!toy || toy.body) return;
+	const dx = toy.x - fromX;
+	const dz = toy.z - fromZ;
+	const distance = Math.hypot(dx, dz) || 1;
+	launchToy(toy, { x: dx / distance * strength, y: strength * 0.7, z: dz / distance * strength });
+}
+
+function pushRestingToy(toy, dx, dz) {
+	const nextX = THREE.MathUtils.clamp(toy.x + dx, BOUNDS.minX, BOUNDS.maxX);
+	const nextZ = THREE.MathUtils.clamp(toy.z + dz, BOUNDS.minZ, BOUNDS.maxZ);
+	if (isOverChute(nextX, nextZ)) return;
+	toy.x = nextX;
+	toy.z = nextZ;
+	toy.group.position.x = nextX;
+	toy.group.position.z = nextZ;
+	toy.group.rotation.z += THREE.MathUtils.clamp(-dx * 3, -0.25, 0.25);
+}
+
 function beginLift() {
 	const target = clawState.target;
-	const xOffset = Math.abs(target.x - clawState.x);
-	const zOffset = Math.abs(target.z - clawState.z);
-	const alignmentError = Math.hypot(xOffset / 0.36, zOffset / 0.5);
+	const alignmentError = Math.hypot(Math.abs(clawState.contactX) / 0.36, Math.abs(clawState.contactZ) / 0.5);
 	clawState.gripQuality = THREE.MathUtils.clamp(1 - alignmentError, 0, 1);
 	const weightFactor = THREE.MathUtils.clamp(1.12 - target.weight * 0.31, 0.5, 0.98);
 	const gripChance = clawState.gripQuality ** 2 * weightFactor;
+	clawState.cableSpeed = 0;
+	clawState.mode = "lift";
 
-	if (alignmentError > 0.95 || Math.random() > gripChance) {
+	if (alignmentError > 0.95) {
+		// Only the finger tips brushed it, so the plush is shoved aside instead of lifted.
 		target.group.scale.y = target.baseScale;
+		const tip = clawTip();
 		clawState.target = null;
 		clawState.mode = "miss";
-		status.textContent = alignmentError > 0.48
+		nudgeToy(target, tip.x, tip.z, 1.1);
+		status.textContent = "인형 중심을 놓쳤어요. 앞뒤와 좌우를 더 정확히 맞춰 보세요.";
+		return;
+	}
+
+	clawState.grabbed = true;
+	clawState.holdX = clawState.contactX * 0.55;
+	clawState.holdZ = clawState.contactZ * 0.55;
+	clawState.slip = 0;
+	clawState.shake = 0;
+	clawState.slack = -1;
+	clawState.hasLastHang = false;
+	clawState.holdVelocity.set(0, 0, 0);
+	let power = sampleClawPower();
+	if (Math.random() > gripChance) {
+		// The fingers never seat properly: the plush rises a little, then slides out.
+		power *= 0.15;
+		clawState.failMessage = alignmentError > 0.48
 			? "인형 중심을 놓쳤어요. 앞뒤와 좌우를 더 정확히 맞춰 보세요."
 			: target.weight > 0.82
 				? "무거운 인형을 들어 올리지 못했어요. 가벼운 인형부터 도전해 보세요."
 				: "집게가 인형을 제대로 감싸지 못했어요.";
-		return;
 	}
-
-	const slipChance = THREE.MathUtils.clamp(0.08 + target.weight * 0.39 + (1 - clawState.gripQuality) * 0.32, 0.08, 0.72);
-	clawState.slipAt = Math.random() < slipChance ? 0.25 + Math.random() * 1.25 : Infinity;
-	clawState.carriedTime = 0;
-	clawState.mode = "lift";
+	clawState.strength = gripStrength(clawState.gripQuality, power);
 	status.textContent = target.weight > 0.82
 		? "무거운 인형이에요! 집게가 버텨야 해요."
 		: "집었어요! 집게가 천천히 들어 올립니다.";
 }
 
-function dropHeldToy() {
-	if (!clawState.target) return;
-	clawState.fallVelocity = 0;
-	clawState.target.group.rotation.z = 0;
-	clawState.target.group.scale.y = clawState.target.baseScale;
-	clawState.mode = "slip";
-	status.textContent = "인형이 무게를 못 이기고 집게에서 빠졌어요!";
+function releaseHeld(message) {
+	const toy = clawState.target;
+	if (!toy) return null;
+	clawState.target = null;
+	clawState.slip = 0;
+	launchToy(toy, clawState.holdVelocity);
+	if (message) status.textContent = message;
+	return toy;
+}
+
+function updateGrip(verticalAccel, step) {
+	const toy = clawState.target;
+	if (!toy || step <= 0) return false;
+	const load = gripLoad({ weight: toy.weight, quality: clawState.gripQuality, verticalAccel, shake: clawState.shake, swing: clawState.swing });
+	clawState.slip = stepSlip(clawState.slip, load, clawState.strength, step);
+	return clawState.slip >= 1;
+}
+
+function collectToy(toy, lucky) {
+	scene.remove(toy.group);
+	const caughtIndex = toys.indexOf(toy);
+	if (caughtIndex >= 0) toys.splice(caughtIndex, 1);
+	if (clawState.releasedToy === toy) clawState.releasedToy = null;
+	startRespawnCooldown(toy.index);
+	if (currentAccount) {
+		currentAccount.bag.push({ id: crypto.randomUUID(), kind: toy.kind, color: toy.color, collectedAt: Date.now() });
+		saveCurrentAccount();
+		renderBag();
+		status.textContent = lucky
+			? "행운! 떨어진 인형이 출구로 쏙 들어갔어요."
+			: toys.length ? "성공! 새 친구가 가방에 담겼어요." : "대성공! 모든 친구를 가방에 담았어요!";
+	} else {
+		status.textContent = "로그인하지 않으면 인형이 가방에 모이지 않아요.";
+	}
+	clawState.delivered = true;
+	score += 1;
+	scoreLabel.textContent = `${score} 마리`;
+	showPrize(toy);
+}
+
+function updateHeldToy(step) {
+	const toy = clawState.target;
+	carriage.updateMatrixWorld(true);
+	hangPoint.set(clawState.holdX, -CLAW_TUNING.hangDepth - clawState.slip * 0.22, clawState.holdZ);
+	claw.localToWorld(hangPoint);
+	// The claw takes up slack before the plush actually leaves the floor.
+	if (clawState.slack < 0) clawState.slack = Math.max(0, hangPoint.y - toy.group.position.y);
+	else clawState.slack = Math.max(0, clawState.slack - clawState.cableSpeed * step);
+	hangPoint.y -= clawState.slack;
+	if (clawState.hasLastHang && step > 0) clawState.holdVelocity.subVectors(hangPoint, clawState.lastHang).divideScalar(step);
+	clawState.lastHang.copy(hangPoint);
+	clawState.hasLastHang = true;
+	toy.group.position.copy(hangPoint);
+	toy.x = hangPoint.x;
+	toy.z = hangPoint.z;
+	const wobble = clawState.slip * 0.3;
+	const time = clock.elapsedTime;
+	toy.group.rotation.x = swingPivot.rotation.x - clawState.holdZ * 0.9 + wobble * Math.sin(time * 23);
+	toy.group.rotation.z = swingPivot.rotation.z + clawState.holdX * 0.9 + wobble * Math.cos(time * 19);
 }
 
 function updateClaw(delta) {
 	const step = delta;
+	const tuning = CLAW_TUNING;
+	let ax = 0;
+	let az = 0;
+	let lengthRate = 0;
 	if (clawState.mode === "ready") {
 		if (!authGate.hidden || !prizeGate.hidden || !bagGate.hidden || !shopGate.hidden) return;
 		const direction = THREE.MathUtils.clamp((keys.has("ArrowRight") || keys.has("d") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("a") ? 1 : 0) + joystickVector.x, -1, 1);
 		const depthDirection = THREE.MathUtils.clamp((keys.has("ArrowDown") || keys.has("s") ? 1 : 0) - (keys.has("ArrowUp") || keys.has("w") ? 1 : 0) + joystickVector.z, -1, 1);
-		clawState.x = THREE.MathUtils.clamp(clawState.x + direction * step * 4.7, -3.55, 3.55);
-		clawState.z = THREE.MathUtils.clamp(clawState.z + depthDirection * step * 3.4, -1.12, 1.05);
+		({ ax, az } = stepGantryVelocity(clawState, direction * tuning.control.speedX, depthDirection * tuning.control.speedZ, tuning.control.accel, step));
+		if (clawState.x < -3.55 || clawState.x > 3.55) {
+			clawState.x = THREE.MathUtils.clamp(clawState.x, -3.55, 3.55);
+			clawState.vx = 0;
+		}
+		if (clawState.z < -1.12 || clawState.z > 1.05) {
+			clawState.z = THREE.MathUtils.clamp(clawState.z, -1.12, 1.05);
+			clawState.vz = 0;
+		}
 	} else if (clawState.mode === "drop") {
 		clawState.modeTime += step;
-		clawState.cable = Math.min(4.02, clawState.cable + step * 5.8);
-		if (clawState.cable >= 4.02) {
-			const nearest = toys.reduce((best, toy) => {
-				const distance = Math.hypot(toy.x - clawState.x, toy.z - clawState.z);
-				const bestDistance = Math.hypot(best.x - clawState.x, best.z - clawState.z);
-				return distance < bestDistance ? toy : best;
-			}, toys[0]);
-			const contactDistance = Math.hypot(nearest.x - clawState.x, nearest.z - clawState.z);
-			clawState.target = contactDistance < 0.76 ? nearest : null;
+		clawState.cable = Math.min(tuning.cableDepth, clawState.cable + step * tuning.dropSpeed);
+		lengthRate = tuning.dropSpeed;
+		if (clawState.cable >= tuning.cableDepth) {
+			lengthRate = 0;
+			const tip = clawTip();
+			let nearest = null;
+			let nearestDistance = Infinity;
+			for (const toy of toys) {
+				if (isAirborne(toy)) continue;
+				const distance = Math.hypot(toy.x - tip.x, toy.z - tip.z);
+				if (distance < nearestDistance) {
+					nearest = toy;
+					nearestDistance = distance;
+				}
+			}
+			clawState.target = nearestDistance < 0.76 ? nearest : null;
+			if (clawState.target) {
+				const target = clawState.target;
+				if (target.body) {
+					target.body = null;
+					target.group.scale.setScalar(target.baseScale);
+				}
+				clawState.contactX = target.x - tip.x;
+				clawState.contactZ = target.z - tip.z;
+			} else if (nearest && nearestDistance < 1.05) {
+				nudgeToy(nearest, tip.x, tip.z, 0.7);
+			}
 			clawState.mode = "touch";
 			clawState.modeTime = 0;
 			status.textContent = clawState.target ? "인형에 닿았어요. 집게를 벌려 감쌉니다." : "집게가 바닥에 닿았어요. 위치를 다시 맞춰 보세요.";
@@ -1728,8 +1902,18 @@ function updateClaw(delta) {
 	} else if (clawState.mode === "close") {
 		clawState.modeTime += step;
 		if (clawState.target) {
+			const target = clawState.target;
 			const squeeze = THREE.MathUtils.clamp(clawState.modeTime / 0.42, 0, 1);
-			clawState.target.group.scale.y = clawState.target.baseScale * (1 - squeeze * 0.12);
+			target.group.scale.y = target.baseScale * (1 - squeeze * 0.12);
+			// Closing fingers drag the plush toward the claw centre and tip it inward.
+			const tip = clawTip();
+			const pull = 1 - squeeze * 0.45;
+			target.x = tip.x + clawState.contactX * pull;
+			target.z = tip.z + clawState.contactZ * pull;
+			target.group.position.x = target.x;
+			target.group.position.z = target.z;
+			target.group.rotation.z = clawState.contactX * squeeze * 0.5;
+			target.group.rotation.x = -clawState.contactZ * squeeze * 0.5;
 		}
 		if (clawState.modeTime >= 0.42) {
 			if (clawState.target) beginLift();
@@ -1740,62 +1924,60 @@ function updateClaw(delta) {
 			clawState.modeTime = 0;
 		}
 	} else if (clawState.mode === "lift" || clawState.mode === "miss") {
-		clawState.cable = Math.max(0, clawState.cable - step * 6.3);
-		if (clawState.mode === "lift") {
-			clawState.carriedTime += step;
-			if (clawState.carriedTime >= clawState.slipAt) dropHeldToy();
+		const loaded = Boolean(clawState.target);
+		const maxSpeed = loaded ? tuning.lift.baseSpeed - clawState.target.weight * tuning.lift.weightSlow : tuning.lift.baseSpeed;
+		const brakeDistance = clawState.cableSpeed ** 2 / (2 * tuning.lift.brake);
+		const accel = clawState.cable <= brakeDistance ? -tuning.lift.brake : tuning.lift.accel;
+		const previousSpeed = clawState.cableSpeed;
+		clawState.cableSpeed = THREE.MathUtils.clamp(clawState.cableSpeed + accel * step, 0.35, maxSpeed);
+		const verticalAccel = step > 0 ? (clawState.cableSpeed - previousSpeed) / step : 0;
+		clawState.cable = Math.max(0, clawState.cable - clawState.cableSpeed * step);
+		lengthRate = -clawState.cableSpeed;
+		if (updateGrip(verticalAccel, step)) {
+			releaseHeld(clawState.failMessage || (clawState.cable > 3.2
+				? "집게 힘이 약해 인형이 빠져나갔어요!"
+				: "인형이 무게를 못 이기고 집게에서 빠졌어요!"));
 		}
-		if (clawState.mode !== "slip" && clawState.cable === 0) clawState.mode = clawState.target ? "deliver" : "return";
+		if (clawState.cable === 0) {
+			clawState.cableSpeed = 0;
+			if (clawState.target) clawState.shake = tuning.lift.topShake;
+			clawState.mode = clawState.grabbed ? "deliver" : "return";
+		}
 	} else if (clawState.mode === "deliver") {
-		clawState.carriedTime += step;
-		if (clawState.carriedTime >= clawState.slipAt) dropHeldToy();
-		clawState.x = Math.min(3.45, clawState.x + step * 5.1);
-		if (clawState.mode === "deliver" && clawState.x >= 3.45) clawState.mode = "deposit";
+		let arrived;
+		({ ax, az, arrived } = stepGantryToward(clawState, CHUTE.x, CHUTE.z, tuning.deliver.maxSpeed, tuning.deliver.accel, step));
+		clawState.shake *= Math.exp(-7 * step);
+		if (updateGrip(0, step)) {
+			releaseHeld(clawState.failMessage || (clawState.shake > 0.15
+				? "꼭대기에서 덜컹! 충격에 인형이 떨어졌어요."
+				: "흔들리는 사이 인형이 미끄러졌어요!"));
+		}
+		if (arrived) {
+			clawState.mode = "deposit";
+			clawState.modeTime = 0;
+		}
 	} else if (clawState.mode === "deposit") {
-		if (clawState.target) {
-			clawState.target.group.position.set(3.45, Math.max(0.2, clawState.target.group.position.y - step * 2.5), 1.02);
-			clawState.target.group.rotation.z += step * 1.4;
-		}
-		if (!clawState.target || clawState.target.group.position.y <= 0.2) {
-			const caughtToy = clawState.target;
-			if (caughtToy) scene.remove(caughtToy.group);
-			const caughtIndex = toys.indexOf(clawState.target);
-			if (caughtIndex >= 0) toys.splice(caughtIndex, 1);
-			if (caughtToy) {
-				startRespawnCooldown(caughtToy.index);
-				if (currentAccount) {
-					currentAccount.bag.push({ id: crypto.randomUUID(), kind: caughtToy.kind, color: caughtToy.color, collectedAt: Date.now() });
-					saveCurrentAccount();
-					renderBag();
-					status.textContent = toys.length ? "성공! 새 친구가 가방에 담겼어요." : "대성공! 모든 친구를 가방에 담았어요!";
-				} else {
-					status.textContent = "로그인하지 않으면 인형이 가방에 모이지 않아요.";
-				}
-			}
-			clawState.target = null;
-			clawState.delivered = true;
-			score += 1;
-			scoreLabel.textContent = `${score} 마리`;
-			if (caughtToy) showPrize(caughtToy);
+		clawState.modeTime += step;
+		if (clawState.target && clawState.modeTime >= 0.12) clawState.releasedToy = releaseHeld("");
+		const released = clawState.releasedToy;
+		const waiting = released && toys.includes(released) && clawState.modeTime < 3;
+		if (clawState.modeTime >= 0.5 && !waiting) {
+			clawState.releasedToy = null;
 			clawState.mode = "return";
-		}
-	} else if (clawState.mode === "slip") {
-		clawState.fallVelocity -= 9.8 * step;
-		clawState.target.group.position.y = Math.max(0.69, clawState.target.group.position.y + clawState.fallVelocity * step);
-		if (clawState.target.group.position.y <= 0.69) {
-			clawState.target.group.position.y = 0.69;
-			clawState.target.group.scale.y = clawState.target.baseScale;
-			clawState.target = null;
-			clawState.mode = "return";
+			clawState.modeTime = 0;
 		}
 	} else if (clawState.mode === "return") {
-		clawState.x = Math.max(0, clawState.x - step * 5.6);
-		clawState.z = THREE.MathUtils.damp(clawState.z, 0, 5, step);
+		let arrived;
+		({ ax, az, arrived } = stepGantryToward(clawState, 0, 0, tuning.travel.maxSpeed, tuning.travel.accel, step));
 		clawState.cable = Math.max(0, clawState.cable - step * 6.3);
-		if (clawState.x === 0 && Math.abs(clawState.z) < 0.02 && clawState.cable === 0) finishRound();
+		if (arrived && clawState.cable === 0) finishRound();
 	}
 
+	const damping = clawState.target && clawState.grabbed ? tuning.damping.loaded : tuning.damping.empty;
+	stepSwing(clawState.swing, { ax, az, length: pendulumLength(), lengthRate, damping }, step);
+
 	carriage.position.set(clawState.x, 5.7, clawState.z);
+	swingPivot.rotation.set(-clawState.swing.z, 0, clawState.swing.x);
 	claw.position.y = -clawState.cable;
 	claw.position.z = 0;
 	cable.position.y = -clawState.cable / 2;
@@ -1805,15 +1987,47 @@ function updateClaw(delta) {
 	if (clawState.mode === "drop") spread = THREE.MathUtils.lerp(0.27, 0.035, THREE.MathUtils.clamp(clawState.modeTime / 0.22, 0, 1));
 	else if (clawState.mode === "touch") spread = THREE.MathUtils.lerp(0.035, 0.27, THREE.MathUtils.clamp(clawState.modeTime / 0.3, 0, 1));
 	else if (clawState.mode === "close") spread = THREE.MathUtils.lerp(0.27, 0.035, THREE.MathUtils.clamp(clawState.modeTime / 0.42, 0, 1));
-	else if (["lift", "deliver", "deposit", "return", "slip", "miss"].includes(clawState.mode)) spread = 0.035;
+	else if (clawState.mode === "deposit") spread = THREE.MathUtils.lerp(0.035, 0.27, THREE.MathUtils.clamp(clawState.modeTime / 0.25, 0, 1));
+	else if (clawState.mode === "return") spread = clawState.grabbed ? THREE.MathUtils.lerp(0.27, 0.035, THREE.MathUtils.clamp(clawState.modeTime / 0.3, 0, 1)) : 0.035;
+	else if (["lift", "deliver", "miss"].includes(clawState.mode)) spread = 0.035;
+	if (clawState.mode === "return") clawState.modeTime += step;
 	for (const finger of fingers) finger.position.set(0, 0, spread);
-	if (clawState.target && ["lift", "deliver"].includes(clawState.mode)) {
-		clawState.target.group.position.set(clawState.x, 5.7 - clawState.cable - 0.78, clawState.z);
+	if (clawState.target && clawState.grabbed && ["lift", "deliver", "deposit"].includes(clawState.mode)) updateHeldToy(step);
+}
+
+function updateToyBodies(delta) {
+	for (const toy of [...toys]) {
+		const body = toy.body;
+		if (!body || toy === clawState.target) continue;
+		const others = [];
+		for (const other of toys) {
+			if (other === toy || other === clawState.target) continue;
+			if (other.body) {
+				const otherBody = other.body;
+				others.push({ x: otherBody.x, y: otherBody.y, z: otherBody.z, nudge: (dx, dz) => { otherBody.x += dx; otherBody.z += dz; } });
+			} else {
+				others.push({ x: other.x, y: FLOOR_Y, z: other.z, nudge: (dx, dz) => pushRestingToy(other, dx, dz) });
+			}
+		}
+		const result = stepBody(body, others, delta);
+		toy.x = body.x;
+		toy.z = body.z;
+		toy.group.position.set(body.x, body.y, body.z);
+		toy.group.rotation.set(body.tiltX, body.baseYaw + body.spin, body.tiltZ);
+		const bulge = toy.baseScale * (1 + body.squash * 0.45);
+		toy.group.scale.set(bulge, toy.baseScale * (1 - body.squash), bulge);
+		if (result === "collected") {
+			collectToy(toy, clawState.releasedToy !== toy);
+		} else if (result === "settled") {
+			toy.group.scale.setScalar(toy.baseScale);
+			toy.body = null;
+			if (clawState.releasedToy === toy) clawState.releasedToy = null;
+		}
 	}
 }
 
 function updateChizzillaEscape(toy, delta, elapsed) {
-	if (toy.kind !== "chizzilla" || toy === clawState.target) return false;
+	if (toy.kind !== "chizzilla" || toy === clawState.target || toy.body) return false;
 	if (!(["ready", "drop", "touch", "close"].includes(clawState.mode))) return false;
 	const awayX = toy.x - clawState.x;
 	const awayZ = toy.z - clawState.z;
@@ -1857,9 +2071,10 @@ function animate() {
 	const delta = Math.min(clock.getDelta(), 0.04);
 	updateRespawns();
 	updateClaw(delta);
+	updateToyBodies(delta);
 	const elapsed = clock.elapsedTime;
 	for (const toy of toys) {
-		if (toy !== clawState.target && !updateChizzillaEscape(toy, delta, elapsed)) {
+		if (toy !== clawState.target && !toy.body && !updateChizzillaEscape(toy, delta, elapsed)) {
 			toy.group.position.y = 0.69 + Math.sin(elapsed * 1.5 + toy.index) * 0.025;
 			toy.group.rotation.z = THREE.MathUtils.damp(toy.group.rotation.z, 0, 8, delta);
 		}
@@ -2298,7 +2513,7 @@ resetButton?.addEventListener("click", () => {
 	resetToys();
 	score = currentAccount ? currentAccount.bag.length : 0;
 	scoreLabel.textContent = `${score} 마리`;
-	clawState.x = -3.35;
+		clawState.x = -3.35;
 		clawState.z = 0;
 	clawState.cable = 0;
 	clawState.target = null;
@@ -2306,8 +2521,7 @@ resetButton?.addEventListener("click", () => {
 	clawState.delivered = false;
 		clawState.modeTime = 0;
 		clawState.gripQuality = 0;
-		clawState.slipAt = Infinity;
-		clawState.carriedTime = 0;
+		resetClawPhysics();
 		status.innerHTML = "<strong>← → ↑ ↓</strong> 앞뒤까지 맞추고<br><strong>스페이스</strong>로 인형을 뽑으세요";
 		updateRestockStatus();
 	setBusy(false);
