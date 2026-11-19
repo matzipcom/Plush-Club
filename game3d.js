@@ -462,15 +462,6 @@ function neonLine(parent, from, to, color) {
 	return neonTube(parent, new THREE.LineCurve3(new THREE.Vector3(...from), new THREE.Vector3(...to)), color);
 }
 
-function neonRing(parent, position, radius, color) {
-	const core = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.022, 8, 96), neon[color].core);
-	const halo = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.062, 8, 96), neon[color].halo);
-	halo.renderOrder = 3;
-	core.position.set(...position);
-	halo.position.set(...position);
-	parent.add(core, halo);
-}
-
 function canvasTexture(width, height, draw) {
 	const canvas = document.createElement("canvas");
 	canvas.width = width;
@@ -480,41 +471,6 @@ function canvasTexture(width, height, draw) {
 	texture.colorSpace = THREE.SRGBColorSpace;
 	texture.anisotropy = 8;
 	return texture;
-}
-
-// Backlit header lightbox with pink neon lettering.
-function makeSignTexture() {
-	return canvasTexture(1200, 200, (ctx, width, height) => {
-		const background = ctx.createLinearGradient(0, 0, 0, height);
-		background.addColorStop(0, "#fbfafc");
-		background.addColorStop(1, "#e9e7ee");
-		ctx.fillStyle = background;
-		ctx.fillRect(0, 0, width, height);
-		ctx.textAlign = "center";
-		ctx.textBaseline = "middle";
-		ctx.font = "italic 900 120px 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif";
-		ctx.shadowColor = "#ff3fa4";
-		ctx.shadowBlur = 26;
-		ctx.fillStyle = "#ff5cb0";
-		ctx.fillText("PLUSH PARADE", width / 2, height / 2 + 6);
-		ctx.shadowBlur = 0;
-		ctx.lineWidth = 3;
-		ctx.strokeStyle = "rgba(255, 228, 242, 0.9)";
-		ctx.strokeText("PLUSH PARADE", width / 2, height / 2 + 6);
-		ctx.fillStyle = "#2cd8f5";
-		ctx.shadowColor = "#2cdcff";
-		ctx.shadowBlur = 18;
-		for (const x of [70, width - 70]) {
-			ctx.beginPath();
-			for (let point = 0; point < 10; point += 1) {
-				const angle = -Math.PI / 2 + point * Math.PI / 5;
-				const radius = point % 2 ? 15 : 36;
-				ctx.lineTo(x + Math.cos(angle) * radius, height / 2 + Math.sin(angle) * radius);
-			}
-			ctx.closePath();
-			ctx.fill();
-		}
-	});
 }
 
 // Quilted diamond pattern moulded into the band under the glass.
@@ -530,36 +486,6 @@ function makeDiamondTexture() {
 		ctx.moveTo(size, 0);
 		ctx.lineTo(0, size);
 		ctx.stroke();
-	});
-}
-
-function makePrizeDoorTexture() {
-	return canvasTexture(512, 512, (ctx, size) => {
-		const glow = ctx.createRadialGradient(size / 2, size / 2, 20, size / 2, size / 2, size / 2);
-		glow.addColorStop(0, "#3a3446");
-		glow.addColorStop(1, "#141418");
-		ctx.fillStyle = glow;
-		ctx.fillRect(0, 0, size, size);
-		ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
-		ctx.lineWidth = 7;
-		ctx.beginPath();
-		ctx.moveTo(size / 2, 380);
-		ctx.bezierCurveTo(90, 260, 120, 120, 200, 120);
-		ctx.bezierCurveTo(240, 120, size / 2, 150, size / 2, 180);
-		ctx.bezierCurveTo(size / 2, 150, 272, 120, 312, 120);
-		ctx.bezierCurveTo(392, 120, 422, 260, size / 2, 380);
-		ctx.stroke();
-		ctx.textAlign = "center";
-		ctx.textBaseline = "middle";
-		ctx.font = "italic 900 96px Impact, 'Arial Black', sans-serif";
-		ctx.lineWidth = 10;
-		ctx.strokeStyle = "#ffffff";
-		ctx.strokeText("PRIZE", size / 2, 236);
-		ctx.strokeText("OUT", size / 2, 330);
-		ctx.fillStyle = "#ff4fae";
-		ctx.fillText("PRIZE", size / 2, 236);
-		ctx.fillStyle = "#23c9ee";
-		ctx.fillText("OUT", size / 2, 330);
 	});
 }
 
@@ -733,17 +659,10 @@ function buildMachine() {
 		neonLine(machine, [side * (innerX - 0.06), lip + 0.2, -innerZ + 0.05], [side * (innerX - 0.06), glassTop - 0.25, -innerZ + 0.05], "cyan");
 	}
 
-	// Header lightbox with a pink neon frame, a cyan strip along its lower edge and an LED panel lighting the pit.
+	// Header box with a cyan strip along its lower edge and an LED panel lighting the pit.
 	const headerHeight = top - glassTop;
 	const headerY = glassTop + headerHeight / 2;
 	roundedBox(machine, [width + 0.06, headerHeight, depth + 0.04], [0, headerY, 0.02], mats.shell, 0.08);
-	const signWidth = width - 0.5;
-	const signHeight = headerHeight - 0.32;
-	const sign = new THREE.Mesh(new THREE.PlaneGeometry(signWidth, signHeight), new THREE.MeshBasicMaterial({ map: makeSignTexture() }));
-	sign.position.set(0, headerY, front + 0.05);
-	machine.add(sign);
-	const signFrame = roundedRectShape(signWidth + 0.14, signHeight + 0.14, 0.12);
-	neonTube(machine, new OutlineCurve(signFrame, (point, target) => target.set(point.x, headerY + point.y, front + 0.07)), "pink", { segments: 160, closed: true });
 	neonLine(machine, [-width / 2 + 0.12, glassTop + 0.07, front + 0.06], [width / 2 - 0.12, glassTop + 0.07, front + 0.06], "cyan");
 	box(machine, [2 * innerX - 0.3, 0.015, 2 * innerZ - 0.3], [0, glassTop - 0.01, 0], mats.led, false);
 
@@ -780,18 +699,6 @@ function buildMachine() {
 	box(screen, [0.56, 0.27, 0.01], [0, 0, 0.041], mats.screenBlue, false);
 	cylinder(panel, 0.18, 0.05, [0.62, panelTop + 0.02, 0.12], mats.chrome, 32);
 	sphere(panel, [0.62, panelTop + 0.05, 0.12], [0.135, 0.06, 0.135], mats.buttonPink, 28);
-
-	// Round push-flap prize door under the console, ringed in cyan neon.
-	const doorX = panel.position.x;
-	const doorY = -1.05;
-	const doorRadius = 0.5;
-	const door = new THREE.Mesh(new THREE.CircleGeometry(doorRadius, 48), new THREE.MeshStandardMaterial({ map: makePrizeDoorTexture(), roughness: 0.16, envMapIntensity: 1.2 }));
-	door.position.set(doorX, doorY, front + 0.012);
-	machine.add(door);
-	const bezel = new THREE.Mesh(new THREE.TorusGeometry(doorRadius + 0.02, 0.035, 12, 64), mats.chrome);
-	bezel.position.set(doorX, doorY, front + 0.01);
-	machine.add(bezel);
-	neonRing(machine, [doorX, doorY, front + 0.03], doorRadius + 0.11, "cyan");
 
 	// Payment column on the right: bill/card reader, price label, coin door and lockable cash box.
 	const pay = new THREE.Group();
