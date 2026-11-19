@@ -1,4 +1,5 @@
-// Rigid-body claw machine simulation modelled on how Claw Machine Sim plays: nothing about a round is decided by dice.
+// Rigid-body claw machine simulation modelled on how Claw Machine Sim plays. Apart from the top-release roll that
+// mimics a real crane's payout setting, nothing about a round is decided by dice.
 // The claw hangs from a cable, its three prongs are motor-driven hinges with a limited holding torque, and every plush
 // is a compound of convex hulls, so lifting, slipping and dropping into the chute all come out of contact forces and
 // friction. Pure module with no THREE dependency: pass in an initialised RAPIER namespace so it also runs in Node.
@@ -49,11 +50,10 @@ export const CLAW_TUNING = {
 	dock: { range: 0.04, stiffness: 2.2, damping: 0.16 },
 	// Chrome prongs slide over fabric far more easily than fabric grips fabric.
 	finger: { closeSpeed: 2.2, openSpeed: 3, openPower: 3, friction: 0.55 },
-	// Prong motor torque. Real machines grab at full power and drop to a weaker hold once the claw rises.
-	power: {
-		fun: { grab: 9, pickup: 9, carry: 9 },
-		realistic: { grab: 5, pickup: 3.4, carry: 2.2 },
-	},
+	// Prong motor torque.
+	power: 9,
+	// Like a real crane, most lifted plush are let go by a brief grip release once the claw reaches the top.
+	topRelease: { chance: 0.78, delay: 0.1, time: 0.2 },
 	plush: {
 		friction: 1, restitution: 0.04, linearDamping: 0.15, angularDamping: 1.2,
 		massBase: 0.08, massPerWeight: 0.3,
@@ -515,7 +515,7 @@ export function createClawController(sim, { home, reach }) {
 	const tuning = CLAW_TUNING;
 	const state = {
 		mode: "ready", x: home.x, z: home.z, vx: 0, vz: 0, cable: 0, cableSpeed: 0, modeTime: 0, landedTime: 0,
-		difficulty: "fun", grabbed: [], startHeights: new Map(), carried: null, everCarried: false, lostTime: 0,
+		grabbed: [], startHeights: new Map(), carried: null, everCarried: false, lostTime: 0, looseTop: false,
 		released: null, releaseQuietTime: 0, noLiftReported: false, delivered: false, landedCable: 0,
 	};
 
@@ -533,7 +533,7 @@ export function createClawController(sim, { home, reach }) {
 	function begin() {
 		if (state.mode !== "ready") return false;
 		Object.assign(state, {
-			vx: 0, vz: 0, cableSpeed: 0, landedTime: 0, grabbed: [], carried: null, everCarried: false, lostTime: 0,
+			vx: 0, vz: 0, cableSpeed: 0, landedTime: 0, grabbed: [], carried: null, everCarried: false, lostTime: 0, looseTop: false,
 			released: null, releaseQuietTime: 0, noLiftReported: false, delivered: false,
 		});
 		state.startHeights.clear();
@@ -568,14 +568,14 @@ export function createClawController(sim, { home, reach }) {
 		const toy = sim.toys.get(state.carried);
 		state.lostTime += toy && !toy.clawContact ? state.stepSize : 0;
 		if (!toy || state.lostTime > 0.12) {
-			events.push({ type: "dropped", id: state.carried, phase: state.mode, risen: state.landedCable - state.cable });
+			events.push({ type: "dropped", id: state.carried, phase: state.mode, risen: state.landedCable - state.cable, loosened: state.looseTop });
 			state.carried = null;
 		}
 	}
 
 	function update(h, input = { x: 0, z: 0 }) {
 		const events = [];
-		const power = tuning.power[state.difficulty] ?? tuning.power.fun;
+		const power = tuning.power;
 		state.modeTime += h;
 		state.stepSize = h;
 		switch (state.mode) {
@@ -615,7 +615,7 @@ export function createClawController(sim, { home, reach }) {
 				if (state.modeTime >= tuning.settleTime) enter("close");
 				break;
 			case "close":
-				sim.setGrip(true, power.grab);
+				sim.setGrip(true, power);
 				if (state.modeTime >= tuning.closeTime) {
 					state.grabbed = touchingIds(true);
 					for (const toy of sim.toys.values()) state.startHeights.set(toy.id, toy.body.worldCom().y);
@@ -624,7 +624,7 @@ export function createClawController(sim, { home, reach }) {
 				}
 				break;
 			case "lift":
-				sim.setGrip(true, state.modeTime > 0.35 ? power.pickup : power.grab);
+				sim.setGrip(true, power);
 				state.cableSpeed = Math.min(tuning.lift.speed, state.cableSpeed + tuning.lift.accel * h);
 				state.cable = Math.max(0, state.cable - state.cableSpeed * h);
 				// Fingers can slide up a plush before catching under its arms, so only give up once nothing is touching the claw.
@@ -635,21 +635,25 @@ export function createClawController(sim, { home, reach }) {
 				if (state.cable === 0) {
 					// The winch hits its top stop without braking, so the load gets a jolt.
 					state.cableSpeed = 0;
+					state.looseTop = state.carried !== null && Math.random() < tuning.topRelease.chance;
 					enter("top");
 				}
 				break;
-			case "top":
-				sim.setGrip(true, power.carry);
+			case "top": {
+				const { delay, time } = tuning.topRelease;
+				const loosening = state.looseTop && state.modeTime >= delay && state.modeTime < delay + time;
+				sim.setGrip(!loosening, loosening ? tuning.finger.openPower : power);
 				if (state.modeTime >= tuning.topPause) enter("deliver");
 				break;
+			}
 			case "deliver":
-				sim.setGrip(true, power.carry);
+				sim.setGrip(true, power);
 				if (stepGantryToward(state, CHUTE.x, CHUTE.z, tuning.deliver.maxSpeed, tuning.deliver.accel, h)) enter("deposit");
 				break;
 			case "deposit": {
 				// Pause over the chute so the load stops swinging, then open.
 				const opening = state.modeTime >= tuning.releaseDelay;
-				sim.setGrip(!opening, opening ? tuning.finger.openPower : power.carry);
+				sim.setGrip(!opening, opening ? tuning.finger.openPower : power);
 				if (state.carried !== null && state.released === null && state.modeTime > tuning.releaseDelay + 0.05) {
 					state.released = state.carried;
 					state.carried = null;

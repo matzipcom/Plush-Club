@@ -1269,9 +1269,6 @@ const PIT = {
 	top: CABINET.glassTop,
 	shaftBottom: CABINET.bandBottom + 0.01,
 };
-const clawModeStorageKey = "plush-club-claw-mode-v1";
-let clawDifficulty = "fun";
-try { if (localStorage.getItem(clawModeStorageKey) === "realistic") clawDifficulty = "realistic"; } catch { /* Fun mode by default. */ }
 let clawSim = null;
 let clawControl = null;
 let physicsLag = 0;
@@ -1341,7 +1338,6 @@ void import("@dimforge/rapier3d-compat").then(async ({ default: RAPIER }) => {
 	await RAPIER.init();
 	clawSim = createClawWorld(RAPIER, { pit: PIT, carriageY: CARRIAGE_Y, home: CLAW_HOME });
 	clawControl = createClawController(clawSim, { home: CLAW_HOME, reach: CLAW_REACH });
-	clawControl.state.difficulty = clawDifficulty;
 	for (const toy of toys) addToyPhysics(toy);
 	clawSim.settle(0.6);
 	syncPhysicsScene();
@@ -2110,7 +2106,6 @@ async function beginDrop() {
 		guestCoinsLabel.textContent = String(guestCoins);
 	}
 	roundExplained = false;
-	clawControl.state.difficulty = clawDifficulty;
 	clawControl.begin();
 	setBusy(true);
 	status.textContent = "집게가 내려가요. 앞뒤 위치도 잘 맞춰 보세요.";
@@ -2171,9 +2166,11 @@ function handleClawEvent(event) {
 			break;
 		case "dropped":
 			roundExplained = true;
-			status.textContent = event.phase === "lift" && event.risen < 0.8
-				? "인형이 무게를 못 이기고 집게에서 빠졌어요!"
-				: dropMessages[event.phase] ?? dropMessages.deliver;
+			status.textContent = event.loosened
+				? "꼭대기에서 집게가 살짝 풀려 인형을 놓쳤어요!"
+				: event.phase === "lift" && event.risen < 0.8
+					? "인형이 무게를 못 이기고 집게에서 빠졌어요!"
+					: dropMessages[event.phase] ?? dropMessages.deliver;
 			break;
 		case "missed":
 			roundExplained = true;
@@ -2611,25 +2608,6 @@ document.querySelector("#closePrize").addEventListener("click", closePrize);
 sharePrizeButton.addEventListener("click", sharePrize);
 mapAnimalsButton.addEventListener("click", () => switchMap("animals"));
 mapPoliticsButton.addEventListener("click", enterPoliticsRoom);
-const modeFunButton = document.querySelector("#modeFun");
-const modeRealisticButton = document.querySelector("#modeRealistic");
-function updateModeButtons() {
-	modeFunButton.setAttribute("aria-pressed", String(clawDifficulty === "fun"));
-	modeRealisticButton.setAttribute("aria-pressed", String(clawDifficulty === "realistic"));
-}
-// The claw's power profile is fixed for a play, so a new mode applies from the next drop.
-function setClawDifficulty(mode) {
-	if (mode === clawDifficulty) return;
-	clawDifficulty = mode;
-	try { localStorage.setItem(clawModeStorageKey, mode); } catch { /* The mode stays selected for this page. */ }
-	updateModeButtons();
-	status.textContent = mode === "realistic"
-		? "현실 모드: 실제 기계처럼 들어 올린 뒤 집게 힘이 약해져요."
-		: "재미 모드: 집게가 끝까지 꽉 잡아요.";
-}
-modeFunButton.addEventListener("click", () => setClawDifficulty("fun"));
-modeRealisticButton.addEventListener("click", () => setClawDifficulty("realistic"));
-updateModeButtons();
 document.querySelector("#logout").addEventListener("click", () => {
 	if (!clawIsIdle()) {
 		status.textContent = "플레이가 끝난 뒤 로그아웃할 수 있어요.";

@@ -181,7 +181,6 @@
 		.map-switch { display: flex; flex: 0 1 auto; gap: 3px; padding: 4px; border: 1px solid #c8a56199; border-radius: 9px; background: #193c34e8; box-shadow: 0 5px 16px #142d2430; }
 		.map-tab { min-width: 120px; height: 34px; padding: 0 12px; border: 1px solid transparent; border-radius: 6px; color: #e7e8df; background: transparent; box-shadow: none; font-size: 11px; font-weight: 600; }
 		.map-tab#mapPolitics { min-width: 154px; }
-		.mode-switch .map-tab { min-width: 84px; }
 		.map-tab:hover { border-color: #ffffff30; color: #fffaf0; background: #ffffff12; }
 		.map-tab[aria-pressed="true"] { border-color: #c8a561; color: #193c34; background: #e7d4a9; font-weight: 700; }
 		.restock-status { position: static; display: flex; align-items: center; gap: 8px; min-width: 134px; padding: 8px 11px; border: 1px solid #ccd9cb; border-radius: 10px; color: var(--ink); background: #f7f6efeb; pointer-events: none; }
@@ -630,10 +629,6 @@
 				<button class="map-tab" id="mapAnimals" type="button" aria-pressed="true">동물 인형</button>
 				<button class="map-tab" id="mapPolitics" type="button" aria-pressed="false">찢토피아 구매 · 1,000코인</button>
 			</nav>
-			<div class="map-switch mode-switch" role="group" aria-label="집게 난이도">
-				<button class="map-tab" id="modeFun" type="button" aria-pressed="true" title="집게가 끝까지 꽉 잡아요">재미 모드</button>
-				<button class="map-tab" id="modeRealistic" type="button" aria-pressed="false" title="실제 기계처럼 들어 올린 뒤 집게 힘이 약해져요">현실 모드</button>
-			</div>
 			<div class="restock-status" aria-live="polite">
 				<span class="restock-label">인형별 재입고</span>
 				<span class="restock-value" id="restock">11마리 준비 완료</span>
@@ -753,7 +748,7 @@
 				<ol>
 					<li><strong>시점 돌리기:</strong> 화면을 마우스나 손가락으로 드래그하면 기계 주위를 돌면서 볼 수 있습니다. 인형뽑기에서 가장 흔한 실수는 정면에서만 보고 집게를 내리는 것입니다. 반드시 측면에서 앞뒤 깊이를 확인하세요.</li>
 					<li><strong>집게 이동:</strong> 화면 아래 조이스틱을 드래그하거나 키보드 방향키·WASD로 집게를 움직입니다. 조이스틱을 미는 정도에 따라 이동 속도가 달라지므로, 목표에 가까워지면 살짝만 밀어 미세 조정하세요.</li>
-					<li><strong>내려잡기:</strong> SPACE 키 또는 인형 뽑기 버튼을 누르면 집게가 내려갑니다. 결과는 확률이 아니라 물리 시뮬레이션으로 정해집니다. 집게 발이 인형의 목이나 팔 아래로 파고들어야 들어 올릴 수 있고, 무거운 인형일수록 발 사이로 빠져나가기 쉽습니다.</li>
+					<li><strong>내려잡기:</strong> SPACE 키 또는 인형 뽑기 버튼을 누르면 집게가 내려갑니다. 집게 발이 인형의 목이나 팔 아래로 파고들어야 들어 올릴 수 있고, 무거운 인형일수록 발 사이로 빠져나가기 쉽습니다. 실제 기계처럼 꼭대기까지 들어 올린 인형은 78% 확률로 집게가 살짝 풀려 떨어집니다.</li>
 				</ol>
 				<p>포획에 실패해도 코인은 5분마다 5개씩 무료로 충전할 수 있어 부담 없이 연습할 수 있습니다. 자세한 조작법과 규칙은 <a href="/guide">이용 가이드</a>에서, 성공률을 올리는 요령은 <a href="/tips">공략 노트</a>에서 확인하세요.</p>
 			</section>
@@ -781,7 +776,7 @@
 					<li><strong>가벼운 인형부터:</strong> 코인이 적을 때는 병아리·오리처럼 가벼운 인형으로 감각을 익히고, 코인에 여유가 생기면 곰돌이·개구리에 도전하는 순서가 효율적입니다.</li>
 					<li><strong>움직이는 인형은 길목에서:</strong> 찢칠라는 집게를 피해 다니므로 쫓아가지 말고 이동 경로를 예상해 길목에 집게를 먼저 보내 두세요.</li>
 				</ul>
-				<p>집게와 인형이 움직이는 원리, 재미·현실 모드의 차이, 코인 운용법까지 포함한 심화 내용은 <a href="/tips">공략 노트</a>에서 다룹니다.</p>
+				<p>집게와 인형이 움직이는 원리, 꼭대기에서 집게가 풀리는 규칙, 코인 운용법까지 포함한 심화 내용은 <a href="/tips">공략 노트</a>에서 다룹니다.</p>
 			</section>
 			<section class="site-information-section" id="faq">
 				<h3>자주 묻는 질문</h3>
@@ -807,7 +802,7 @@
 				<div class="update-entry">
 					<h4>완전 물리 시뮬레이션 집게</h4>
 					<time datetime="2026-11-19">2026년 11월 19일</time>
-					<p>성공 확률을 계산하던 방식을 없애고, 집게·케이블·인형을 모두 실제 물체처럼 시뮬레이션합니다. 집게 발이 인형을 감싸 들어 올리지 못하면 그대로 빠져나갑니다. 재미 모드와 현실 모드를 고를 수 있습니다. 가방의 카지노 룰렛 기능은 종료되었습니다.</p>
+					<p>집게·케이블·인형을 모두 실제 물체처럼 시뮬레이션합니다. 집게 발이 인형을 감싸 들어 올리지 못하면 그대로 빠져나가고, 실제 인형뽑기 기계처럼 들어 올린 인형은 78% 확률로 꼭대기에서 집게가 살짝 풀려 떨어집니다. 가방의 카지노 룰렛 기능은 종료되었습니다.</p>
 				</div>
 				<div class="update-entry">
 					<h4>현실적인 집게 물리 적용</h4>
