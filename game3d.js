@@ -1,11 +1,15 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_AUTH_REDIRECT_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./supabase-config.js";
 import { setupLanguageSelector, translate } from "./i18n.js";
 import {
-	CLAW_TUNING, FLOOR_Y, BOUNDS, CHUTE, createBody, createSwing, gripLoad, gripStrength, isOverChute,
-	kickSwing, sampleClawPower, stepBody, stepGantryToward, stepGantryVelocity, stepSlip, stepSwing,
+	createArcadeFloorTexture, createEnvironment, embroideryThread, feltFabric, plushFabric, puffGeometry, safetyEyeMaterial,
+	seededRandom, tiledFurNormal,
+} from "./realism.js";
+import {
+	BOUNDS, CHUTE, CLAW_GEOMETRY, CLAW_TUNING, FLOOR_Y, MAX_STEP, createClawController, createClawWorld, overlapsChute, plushMass,
 } from "./physics.js";
 
 setupLanguageSelector();
@@ -118,22 +122,25 @@ themeToggle.addEventListener("click", () => {
 	darkMode = !darkMode;
 	applyTheme();
 });
+// Arcade interior: neutral walls fading into fog, lit like a real room rather than a flat game backdrop.
 const scene = new THREE.Scene();
-scene.background = new THREE.Color("#dcebe0");
-scene.fog = new THREE.Fog("#dcebe0", 19, 38);
+scene.background = new THREE.Color("#cfcac2");
+scene.fog = new THREE.Fog("#cfcac2", 20, 46);
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.1;
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 0.92;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+scene.environment = createEnvironment(renderer);
+scene.environmentIntensity = 0.55;
 
 const prizeScene = new THREE.Scene();
 prizeScene.background = new THREE.Color("#e8f1df");
-prizeScene.add(new THREE.HemisphereLight(0xfffdf0, 0x829586, 2.4));
-const prizeLight = new THREE.DirectionalLight(0xfff0d7, 3.2);
+prizeScene.add(new THREE.HemisphereLight(0xfffdf0, 0x829586, 0.7));
+const prizeLight = new THREE.DirectionalLight(0xfff4e6, 2.4);
 prizeLight.position.set(-3, 5, 6);
 prizeScene.add(prizeLight);
 const prizeCamera = new THREE.OrthographicCamera(-1.25, 1.25, 1.25, -1.25, 0.1, 15);
@@ -142,8 +149,10 @@ prizeCamera.lookAt(0, 0.82, 0);
 const prizeRenderer = new THREE.WebGLRenderer({ canvas: prizeCanvas, antialias: true, alpha: false });
 prizeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 prizeRenderer.outputColorSpace = THREE.SRGBColorSpace;
-prizeRenderer.toneMapping = THREE.ACESFilmicToneMapping;
-prizeRenderer.toneMappingExposure = 1.15;
+prizeRenderer.toneMapping = THREE.NeutralToneMapping;
+prizeRenderer.toneMappingExposure = 1;
+prizeScene.environment = createEnvironment(prizeRenderer);
+prizeScene.environmentIntensity = 0.7;
 let prizeModel = null;
 let prizeModelKind = null;
 
@@ -177,7 +186,11 @@ new GLTFLoader().loadAsync("./assets/base_basic_pbr.glb").then((gltf) => {
 		}
 	});
 	chizzillaPbrTemplate = model;
-	for (const toy of toys) if (toy.kind === "chizzilla") replaceChizzillaWithPbr(toy.group);
+	for (const toy of toys) {
+		if (toy.kind !== "chizzilla") continue;
+		replaceChizzillaWithPbr(toy.group);
+		rebuildToyPhysics(toy);
+	}
 	if (prizeModelKind === "chizzilla" && prizeModel) replaceChizzillaWithPbr(prizeModel);
 }).catch(() => {
 	status.textContent = "찢칠라 3D 모델을 불러오지 못해 이미지 모델로 표시합니다.";
@@ -209,7 +222,11 @@ new GLTFLoader().loadAsync("./assets/base.glb").then((gltf) => {
 		}
 	});
 	mulcoritaTemplate = model;
-	for (const toy of toys) if (toy.kind === "mulcorita") replaceMulcoritaModel(toy.group);
+	for (const toy of toys) {
+		if (toy.kind !== "mulcorita") continue;
+		replaceMulcoritaModel(toy.group);
+		rebuildToyPhysics(toy);
+	}
 	if (prizeModelKind === "mulcorita" && prizeModel) {
 		replaceMulcoritaModel(prizeModel);
 		requestAnimationFrame(renderPrizePreview);
@@ -246,7 +263,11 @@ function loadMoonkoritaModel() {
 			}
 		});
 		moonkoritaTemplate = model;
-		for (const toy of toys) if (toy.kind === "moonkorita") replaceMoonkoritaModel(toy.group);
+		for (const toy of toys) {
+			if (toy.kind !== "moonkorita") continue;
+			replaceMoonkoritaModel(toy.group);
+			rebuildToyPhysics(toy);
+		}
 		if (prizeModelKind === "moonkorita" && prizeModel) {
 			replaceMoonkoritaModel(prizeModel);
 			requestAnimationFrame(renderPrizePreview);
@@ -262,47 +283,94 @@ let prizeReturnFocus = null;
 let fireworkSequence = 0;
 const prizeDrag = { pointerId: null, x: 0, y: 0 };
 
-const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 80);
-const cameraTarget = new THREE.Vector3(0, 2.7, 0);
-const cameraOrbit = { azimuth: 0, elevation: Math.atan(0.23), distance: 18, zoom: 1 };
-const cameraDrag = { pointerId: null, x: 0, y: 0, startX: 0, startY: 0 };
-const pointerNdc = new THREE.Vector2();
-const interactionRaycaster = new THREE.Raycaster();
-const adInquiryUrl = "https://www.instagram.com/9sept10th/";
-scene.add(new THREE.HemisphereLight(0xf7fff4, 0x829586, 2.1));
+// Single-player upright crane cabinet (width:height ≈ 0.56), built around the plush so they keep their real-world scale.
+// The pit floor sits at FLOOR_Y; the lower cabinet extends below it down to the arcade floor.
+const CABINET = {
+	width: 4.4, depth: 3.5, wall: 0.12, cornerRadius: 0.34,
+	ground: -2.46, bandBottom: 0.36, lip: 0.81, glassTop: 4.45, top: 5.4,
+};
+const CARRIAGE_Y = CABINET.glassTop - 0.4;
+const RAIL_Z = CABINET.depth / 2 - CABINET.wall - 0.12;
+// Real machines park the claw over the prize chute between plays.
+const CLAW_HOME = { x: CHUTE.x, z: CHUTE.z };
+const CLAW_REACH = { minX: -1.6, maxX: 1.6, minZ: -1.12, maxZ: 1.1 };
 
-const keyLight = new THREE.DirectionalLight(0xfff0d7, 3.2);
+const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 80);
+// Frame the whole cabinet like a product photo, seen slightly from the right so its depth reads.
+const machineFit = { width: 5.6, height: 8.4 };
+const cameraTarget = new THREE.Vector3(0, (CABINET.ground + CABINET.top) / 2 + 0.05, 0.25);
+const cameraOrbit = { azimuth: 0.28, elevation: Math.atan(0.23), distance: 12, zoom: 1 };
+const cameraDrag = { pointerId: null, x: 0, y: 0 };
+scene.add(new THREE.HemisphereLight(0xfbf8f2, 0x8a847b, 0.55));
+
+// Ceiling fixture of the arcade room.
+const keyLight = new THREE.DirectionalLight(0xfff3e4, 1.6);
 keyLight.position.set(-5, 10, 7);
 keyLight.castShadow = true;
-keyLight.shadow.mapSize.set(1536, 1536);
-keyLight.shadow.camera.left = -8;
-keyLight.shadow.camera.right = 8;
-keyLight.shadow.camera.top = 10;
-keyLight.shadow.camera.bottom = -5;
-keyLight.shadow.bias = -0.0004;
+keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.shadow.camera.left = -6;
+keyLight.shadow.camera.right = 6;
+keyLight.shadow.camera.top = 7;
+keyLight.shadow.camera.bottom = -6;
+keyLight.shadow.bias = -0.0003;
+keyLight.shadow.normalBias = 0.02;
+keyLight.shadow.radius = 4;
 scene.add(keyLight);
 
-const fillLight = new THREE.PointLight(0xe8a68d, 82, 16, 2);
-fillLight.position.set(4, 4.5, 5);
+const fillLight = new THREE.PointLight(0xfff1e2, 40, 18, 2);
+fillLight.position.set(4, 4.5, 6);
 scene.add(fillLight);
-const interiorLight = new THREE.PointLight(0xffdf9c, 62, 12, 2);
-interiorLight.position.set(-2.2, 5.2, -0.5);
-scene.add(interiorLight);
+// Cool-white LED panel in the cabinet header lights the prize pit from above, as in real machines.
+const interiorLight = new THREE.SpotLight(0xf6f8ff, 22, 7, 0.95, 0.85, 1.6);
+interiorLight.position.set(0, CABINET.glassTop - 0.05, 0.3);
+interiorLight.target.position.set(0, FLOOR_Y, 0);
+interiorLight.castShadow = true;
+interiorLight.shadow.mapSize.set(1024, 1024);
+interiorLight.shadow.bias = -0.0005;
+interiorLight.shadow.normalBias = 0.02;
+interiorLight.shadow.radius = 6;
+scene.add(interiorLight, interiorLight.target);
 
 const material = (color, roughness = 0.55, metalness = 0) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
+// Powder-coated steel / moulded ABS cabinet panels: semi-gloss, reflecting the room through the environment map.
+const coated = (color, roughness = 0.3) => new THREE.MeshStandardMaterial({ color, roughness, envMapIntensity: 0.9 });
 const mats = {
-	ink: material("#193c37", 0.38),
-	frame: material("#477c69", 0.32, 0.22),
-	mint: material("#a8d7bb", 0.32),
 	cream: material("#fff5dc", 0.4),
-	coral: material("#e87963", 0.32),
-	gold: material("#e9bd64", 0.26, 0.5),
-	metal: material("#a8bbb0", 0.24, 0.72),
-	black: material("#253a34", 0.23),
+	gold: material("#d9b469", 0.3, 1),
+	shell: coated("#ecebee"),
+	shellShade: coated("#c4c5ca", 0.45),
+	backWall: coated("#f2f0f3", 0.55),
+	floor: new THREE.MeshStandardMaterial({ color: "#d9d6de", roughness: 1, normalMap: tiledFurNormal(14, 6), normalScale: new THREE.Vector2(0.6, 0.6) }),
+	rail: material("#c3c6cc", 0.32, 1),
+	carriage: coated("#d4d5d9", 0.4),
+	chrome: material("#f1f3f6", 0.1, 1),
+	steel: material("#b7bcc4", 0.3, 1),
+	wire: material("#1d1e21", 0.62),
+	trim: material("#2a2b31", 0.42),
+	rubber: material("#1b1b1d", 0.85),
+	// Translucent-looking acrylic ball top and an illuminated push button, as on the reference cabinets.
+	ballPurple: new THREE.MeshPhysicalMaterial({ color: "#b98ae0", roughness: 0.06, clearcoat: 1, clearcoatRoughness: 0.03, emissive: "#5a2a86", emissiveIntensity: 0.35 }),
+	buttonPink: new THREE.MeshStandardMaterial({ color: "#ffd0e6", roughness: 0.25, emissive: "#ff3f9f", emissiveIntensity: 1.1 }),
+	screenBlue: new THREE.MeshStandardMaterial({ color: "#0f1a33", roughness: 0.08, emissive: "#2f6be0", emissiveIntensity: 0.9 }),
+	hole: material("#111215", 0.7),
+	led: new THREE.MeshBasicMaterial({ color: "#f7f9ff" }),
 };
+// Neon / LED strips: a saturated core plus a faint halo so they read as glowing on both the white body and dark areas.
+const neon = {
+	pink: { core: new THREE.MeshBasicMaterial({ color: "#ff74bf" }), halo: neonHalo("#ff4fae") },
+	cyan: { core: new THREE.MeshBasicMaterial({ color: "#6af1ff" }), halo: neonHalo("#2cdcff") },
+};
+function neonHalo(color) {
+	return new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.22, depthWrite: false });
+}
+// Tempered glass: barely tinted, mostly visible through its reflections of the room.
 const glass = new THREE.MeshPhysicalMaterial({
-	color: "#d2eee2", roughness: 0.12, metalness: 0.05,
-	transparent: true, opacity: 0.14, depthWrite: false,
+	color: "#f2f8f7", roughness: 0.03, metalness: 0, envMapIntensity: 1.8,
+	transparent: true, opacity: 0.1, depthWrite: false,
+});
+const acrylic = new THREE.MeshPhysicalMaterial({
+	color: "#f4fbff", roughness: 0.05, metalness: 0, envMapIntensity: 1.5,
+	transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide,
 });
 const craftColors = [
 	{ name: "빨강", value: "#e45b5b" },
@@ -325,8 +393,7 @@ rainbowContext.fillStyle = rainbowGradient;
 rainbowContext.fillRect(0, 0, rainbowCanvas.width, rainbowCanvas.height);
 const rainbowTexture = new THREE.CanvasTexture(rainbowCanvas);
 rainbowTexture.colorSpace = THREE.SRGBColorSpace;
-const rainbowPlush = new THREE.MeshStandardMaterial({ map: rainbowTexture, roughness: 0.94 });
-const plush = (color) => color === "rainbow" ? rainbowPlush : material(color, 0.94);
+const plush = (color) => color === "rainbow" ? plushFabric("#ffffff", { map: rainbowTexture }) : plushFabric(color);
 const chizzillaImageTexture = new THREE.TextureLoader().load(
 	"./assets/chizzilla.jpg",
 	(texture) => { texture.colorSpace = THREE.SRGBColorSpace; },
@@ -335,11 +402,15 @@ const chizzillaImageTexture = new THREE.TextureLoader().load(
 );
 chizzillaImageTexture.colorSpace = THREE.SRGBColorSpace;
 const chizzillaImageMaterial = new THREE.MeshBasicMaterial({ map: chizzillaImageTexture, side: THREE.DoubleSide });
-const eyeMaterial = new THREE.MeshPhysicalMaterial({ color: "#213a35", roughness: 0.18, clearcoat: 0.8 });
-const bellyMaterial = material("#fff0d9", 0.92);
-const blushMaterial = material("#e98983", 0.8);
+const eyeMaterial = safetyEyeMaterial();
+const threadMaterial = embroideryThread("#3b2925");
+const bellyMaterial = plushFabric("#f6ead8");
+const blushMaterial = feltFabric("#e9a39c");
+const beakMaterial = feltFabric("#ea9152");
+const tagMaterial = new THREE.MeshStandardMaterial({ color: "#f7f5ef", roughness: 0.5, side: THREE.DoubleSide });
 const machine = new THREE.Group();
 scene.add(machine);
+let panelStick = null;
 
 function box(parent, size, position, surface, castShadow = true) {
 	const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), surface);
@@ -360,147 +431,417 @@ function sphere(parent, position, scale, surface, segments = 20) {
 	return mesh;
 }
 
-function makeSignTexture() {
-	const sign = document.createElement("canvas");
-	sign.width = 1024;
-	sign.height = 256;
-	const ctx = sign.getContext("2d");
-	ctx.fillStyle = "#193c37";
-	ctx.fillRect(0, 0, sign.width, sign.height);
-	ctx.fillStyle = "#e9bd64";
-	for (const x of [44, 980]) {
-		ctx.beginPath();
-		ctx.arc(x, 128, 13, 0, Math.PI * 2);
-		ctx.fill();
+// Stuffed fabric part (see puffGeometry): lumpy, optionally seamed down the middle and sagging into a flat base.
+function puff(parent, position, scale, surface, options = {}) {
+	const mesh = new THREE.Mesh(puffGeometry(options), surface);
+	mesh.position.set(...position);
+	mesh.scale.set(...scale);
+	mesh.castShadow = true;
+	mesh.receiveShadow = true;
+	parent.add(mesh);
+	return mesh;
+}
+
+function roundedBox(parent, size, position, surface, radius = 0.05, castShadow = true) {
+	const mesh = new THREE.Mesh(new RoundedBoxGeometry(...size, 3, radius), surface);
+	mesh.position.set(...position);
+	mesh.castShadow = castShadow;
+	mesh.receiveShadow = true;
+	parent.add(mesh);
+	return mesh;
+}
+
+// Follows a flat outline (e.g. a rounded rectangle) through 3D space, so neon tubes can be bent along panel edges.
+class OutlineCurve extends THREE.Curve {
+	constructor(outline, place) {
+		super();
+		this.outline = outline;
+		this.place = place;
 	}
-	ctx.fillStyle = "#fff6dc";
-	ctx.textAlign = "center";
-	ctx.textBaseline = "middle";
-	ctx.font = "700 78px Georgia, serif";
-	ctx.fillText("PLUSH PARADE", 512, 122);
-	ctx.fillStyle = "#9bcdb0";
-	ctx.font = "700 22px sans-serif";
-	ctx.fillText("PICK A LITTLE JOY", 512, 207);
-	const texture = new THREE.CanvasTexture(sign);
+
+	getPoint(t, target = new THREE.Vector3()) {
+		return this.place(this.outline.getPointAt(Math.min(t, 1)), target);
+	}
+}
+
+function neonTube(parent, curve, color, { radius = 0.022, segments = 1, closed = false } = {}) {
+	const core = new THREE.Mesh(new THREE.TubeGeometry(curve, segments, radius, 8, closed), neon[color].core);
+	const halo = new THREE.Mesh(new THREE.TubeGeometry(curve, segments, radius * 2.8, 8, closed), neon[color].halo);
+	halo.renderOrder = 3;
+	parent.add(core, halo);
+	return core;
+}
+
+function neonLine(parent, from, to, color) {
+	return neonTube(parent, new THREE.LineCurve3(new THREE.Vector3(...from), new THREE.Vector3(...to)), color);
+}
+
+function neonRing(parent, position, radius, color) {
+	const core = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.022, 8, 96), neon[color].core);
+	const halo = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.062, 8, 96), neon[color].halo);
+	halo.renderOrder = 3;
+	core.position.set(...position);
+	halo.position.set(...position);
+	parent.add(core, halo);
+}
+
+function canvasTexture(width, height, draw) {
+	const canvas = document.createElement("canvas");
+	canvas.width = width;
+	canvas.height = height;
+	draw(canvas.getContext("2d"), width, height);
+	const texture = new THREE.CanvasTexture(canvas);
 	texture.colorSpace = THREE.SRGBColorSpace;
+	texture.anisotropy = 8;
 	return texture;
 }
 
-let adInquiryTexture = null;
-function renderAdInquiryTexture() {
-	if (!adInquiryTexture) return;
-	const sign = adInquiryTexture.image;
-	const context = sign.getContext("2d");
-	context.clearRect(0, 0, sign.width, sign.height);
-	context.fillStyle = "#fffaf0";
-	context.fillRect(0, 0, sign.width, sign.height);
-	context.fillStyle = "#193c37";
-	context.textAlign = "center";
-	context.textBaseline = "middle";
-	context.font = "700 92px 'Malgun Gothic', sans-serif";
-	context.fillText(translate("광고 제휴 문의"), sign.width / 2, sign.height / 2);
-	adInquiryTexture.needsUpdate = true;
+// Backlit header lightbox with pink neon lettering.
+function makeSignTexture() {
+	return canvasTexture(1200, 200, (ctx, width, height) => {
+		const background = ctx.createLinearGradient(0, 0, 0, height);
+		background.addColorStop(0, "#fbfafc");
+		background.addColorStop(1, "#e9e7ee");
+		ctx.fillStyle = background;
+		ctx.fillRect(0, 0, width, height);
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+		ctx.font = "italic 900 120px 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif";
+		ctx.shadowColor = "#ff3fa4";
+		ctx.shadowBlur = 26;
+		ctx.fillStyle = "#ff5cb0";
+		ctx.fillText("PLUSH PARADE", width / 2, height / 2 + 6);
+		ctx.shadowBlur = 0;
+		ctx.lineWidth = 3;
+		ctx.strokeStyle = "rgba(255, 228, 242, 0.9)";
+		ctx.strokeText("PLUSH PARADE", width / 2, height / 2 + 6);
+		ctx.fillStyle = "#2cd8f5";
+		ctx.shadowColor = "#2cdcff";
+		ctx.shadowBlur = 18;
+		for (const x of [70, width - 70]) {
+			ctx.beginPath();
+			for (let point = 0; point < 10; point += 1) {
+				const angle = -Math.PI / 2 + point * Math.PI / 5;
+				const radius = point % 2 ? 15 : 36;
+				ctx.lineTo(x + Math.cos(angle) * radius, height / 2 + Math.sin(angle) * radius);
+			}
+			ctx.closePath();
+			ctx.fill();
+		}
+	});
 }
 
-document.addEventListener("plush-language-change", renderAdInquiryTexture);
+// Quilted diamond pattern moulded into the band under the glass.
+function makeDiamondTexture() {
+	return canvasTexture(256, 256, (ctx, size) => {
+		ctx.fillStyle = "#f3f2f5";
+		ctx.fillRect(0, 0, size, size);
+		ctx.strokeStyle = "rgba(140, 140, 152, 0.5)";
+		ctx.lineWidth = 5;
+		ctx.beginPath();
+		ctx.moveTo(0, 0);
+		ctx.lineTo(size, size);
+		ctx.moveTo(size, 0);
+		ctx.lineTo(0, size);
+		ctx.stroke();
+	});
+}
 
-function makeAdInquiryTexture() {
-	const sign = document.createElement("canvas");
-	sign.width = 1024;
-	sign.height = 256;
-	adInquiryTexture = new THREE.CanvasTexture(sign);
-	adInquiryTexture.colorSpace = THREE.SRGBColorSpace;
-	renderAdInquiryTexture();
-	return adInquiryTexture;
+function makePrizeDoorTexture() {
+	return canvasTexture(512, 512, (ctx, size) => {
+		const glow = ctx.createRadialGradient(size / 2, size / 2, 20, size / 2, size / 2, size / 2);
+		glow.addColorStop(0, "#3a3446");
+		glow.addColorStop(1, "#141418");
+		ctx.fillStyle = glow;
+		ctx.fillRect(0, 0, size, size);
+		ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+		ctx.lineWidth = 7;
+		ctx.beginPath();
+		ctx.moveTo(size / 2, 380);
+		ctx.bezierCurveTo(90, 260, 120, 120, 200, 120);
+		ctx.bezierCurveTo(240, 120, size / 2, 150, size / 2, 180);
+		ctx.bezierCurveTo(size / 2, 150, 272, 120, 312, 120);
+		ctx.bezierCurveTo(392, 120, 422, 260, size / 2, 380);
+		ctx.stroke();
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+		ctx.font = "italic 900 96px Impact, 'Arial Black', sans-serif";
+		ctx.lineWidth = 10;
+		ctx.strokeStyle = "#ffffff";
+		ctx.strokeText("PRIZE", size / 2, 236);
+		ctx.strokeText("OUT", size / 2, 330);
+		ctx.fillStyle = "#ff4fae";
+		ctx.fillText("PRIZE", size / 2, 236);
+		ctx.fillStyle = "#23c9ee";
+		ctx.fillText("OUT", size / 2, 330);
+	});
+}
+
+function makePriceLabelTexture() {
+	return canvasTexture(320, 80, (ctx, width, height) => {
+		ctx.fillStyle = "#fbfbfb";
+		ctx.fillRect(0, 0, width, height);
+		ctx.fillStyle = "#26262c";
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+		ctx.font = "800 34px 'Arial Black', sans-serif";
+		ctx.fillText("1 PLAY = 1 COIN", width / 2, height / 2 + 2);
+	});
+}
+
+// LED direction marks printed on the front lip of the control panel.
+function makePanelIconTexture() {
+	return canvasTexture(512, 96, (ctx, width, height) => {
+		ctx.clearRect(0, 0, width, height);
+		ctx.fillStyle = "#c8f8ff";
+		ctx.shadowColor = "#2cdcff";
+		ctx.shadowBlur = 14;
+		const y = height / 2;
+		const triangle = (x, direction) => {
+			ctx.beginPath();
+			ctx.moveTo(x, y - 20 * direction);
+			ctx.lineTo(x + 22, y + 16 * direction);
+			ctx.lineTo(x - 22, y + 16 * direction);
+			ctx.closePath();
+			ctx.fill();
+		};
+		ctx.fillRect(70, y - 14, 70, 8);
+		ctx.fillRect(70, y + 6, 70, 8);
+		triangle(215, 1);
+		triangle(297, -1);
+		ctx.fillRect(372, y - 14, 70, 8);
+		ctx.fillRect(372, y + 6, 70, 8);
+	});
+}
+
+function roundedRectShape(width, depth, radius) {
+	const shape = new THREE.Shape();
+	const x = -width / 2;
+	const y = -depth / 2;
+	shape.moveTo(x + radius, y);
+	shape.lineTo(x + width - radius, y);
+	shape.quadraticCurveTo(x + width, y, x + width, y + radius);
+	shape.lineTo(x + width, y + depth - radius);
+	shape.quadraticCurveTo(x + width, y + depth, x + width - radius, y + depth);
+	shape.lineTo(x + radius, y + depth);
+	shape.quadraticCurveTo(x, y + depth, x, y + depth - radius);
+	shape.lineTo(x, y + radius);
+	shape.quadraticCurveTo(x, y, x + radius, y);
+	return shape;
+}
+
+function slab(parent, shape, thickness, y, surface) {
+	const geometry = new THREE.ExtrudeGeometry(shape, { depth: thickness, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 3, curveSegments: 16 });
+	geometry.rotateX(Math.PI / 2);
+	const mesh = new THREE.Mesh(geometry, surface);
+	mesh.position.y = y + thickness;
+	mesh.castShadow = true;
+	mesh.receiveShadow = true;
+	parent.add(mesh);
+	return mesh;
+}
+
+function cylinder(parent, radius, height, position, surface, segments = 24) {
+	const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, segments), surface);
+	mesh.position.set(...position);
+	mesh.castShadow = true;
+	mesh.receiveShadow = true;
+	parent.add(mesh);
+	return mesh;
+}
+
+function faceForward(mesh) {
+	mesh.rotation.x = Math.PI / 2;
+	return mesh;
 }
 
 function buildMachine() {
-	const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), material("#e7e8d9", 0.88));
+	const { width, depth, wall, cornerRadius, ground: groundY, bandBottom, lip, glassTop, top } = CABINET;
+	const front = depth / 2;
+	const innerX = width / 2 - wall;
+	const innerZ = depth / 2 - wall;
+	const glassX = width / 2 - wall / 2;
+	const glassZ = front - wall / 2;
+
+	const floorTexture = createArcadeFloorTexture();
+	floorTexture.repeat.set(18, 18);
+	const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.42, envMapIntensity: 0.6 }));
 	ground.rotation.x = -Math.PI / 2;
-	ground.position.y = -0.12;
+	ground.position.y = groundY;
 	ground.receiveShadow = true;
 	scene.add(ground);
 
-	box(machine, [9.4, 0.68, 3.7], [0, 0.2, 0], mats.ink);
-	box(machine, [9.12, 0.48, 3.48], [0, 0.24, 0], mats.frame);
-	box(machine, [8.78, 0.12, 3.2], [0, 0.58, 0], mats.gold);
-	box(machine, [8.85, 0.08, 3.18], [0, 0.01, 0], mats.ink);
+	// Lower cabinet on a recessed plinth with casters.
+	const bodyBottom = groundY + 0.12;
+	roundedBox(machine, [width, bandBottom - bodyBottom, depth], [0, (bandBottom + bodyBottom) / 2, 0], mats.shell, 0.07);
+	box(machine, [width - 0.9, 0.12, depth - 0.9], [0, groundY + 0.06, 0], mats.trim, false);
+	for (const x of [-1, 1]) {
+		for (const z of [-1, 1]) {
+			const caster = new THREE.Group();
+			caster.position.set(x * (width / 2 - 0.3), groundY, z * (depth / 2 - 0.3));
+			machine.add(caster);
+			box(caster, [0.13, 0.03, 0.13], [0, 0.105, 0], mats.chrome, false);
+			cylinder(caster, 0.06, 0.05, [0, 0.06, 0], mats.rubber, 16).rotation.z = Math.PI / 2;
+		}
+	}
 
-	box(machine, [0.27, 5.75, 0.28], [-4.18, 3.48, -0.02], mats.ink);
-	box(machine, [0.27, 5.75, 0.28], [4.18, 3.48, -0.02], mats.ink);
-	box(machine, [0.13, 5.45, 0.15], [-3.98, 3.52, 0.08], mats.gold);
-	box(machine, [0.13, 5.45, 0.15], [3.98, 3.52, 0.08], mats.gold);
-	box(machine, [8.62, 0.25, 3.45], [0, 6.28, 0], mats.ink);
-	box(machine, [8.32, 0.12, 3.22], [0, 6.12, 0], mats.gold);
-	box(machine, [8.04, 0.1, 3.18], [0, 0.79, 0], mats.ink);
-	box(machine, [7.82, 5.17, 0.12], [0, 3.48, -1.64], mats.mint);
-	const adInquiryFrame = box(machine, [3.3, 0.9, 0.08], [0, 3.35, -1.55], mats.gold, false);
-	const adInquiryPlate = box(machine, [3.18, 0.78, 0.035], [0, 3.35, -1.505], material("#fffaf0", 0.48), false);
-	adInquiryFrame.userData.adInquiryTarget = true;
-	adInquiryPlate.userData.adInquiryTarget = true;
-	const adInquiryText = new THREE.Mesh(
-		new THREE.PlaneGeometry(3.1, 0.68),
-		new THREE.MeshBasicMaterial({ map: makeAdInquiryTexture() }),
-	);
-	adInquiryText.position.set(0, 3.35, -1.485);
-	adInquiryText.userData.adInquiryTarget = true;
-	machine.add(adInquiryText);
-	box(machine, [7.78, 5.15, 0.08], [0, 3.48, 1.7], glass, false);
-	box(machine, [0.08, 5.05, 3.2], [-4.03, 3.48, 0], glass, false);
-	box(machine, [0.08, 5.05, 3.2], [4.03, 3.48, 0], glass, false);
+	// Quilted band under the glass. Its walls form the lip of the prize pit.
+	box(machine, [width + 0.012, 0.03, depth + 0.012], [0, bandBottom, 0], mats.shellShade, false);
+	const diamondTexture = makeDiamondTexture();
+	const bandHeight = lip - bandBottom;
+	const bandY = (lip + bandBottom) / 2;
+	const bandMaterial = (length) => {
+		const map = diamondTexture.clone();
+		map.wrapS = THREE.RepeatWrapping;
+		map.wrapT = THREE.RepeatWrapping;
+		map.repeat.set(length / 0.3, bandHeight / 0.3);
+		return new THREE.MeshStandardMaterial({ map, roughness: 0.32, envMapIntensity: 0.9 });
+	};
+	roundedBox(machine, [width, bandHeight, wall], [0, bandY, front - wall / 2], bandMaterial(width), 0.03);
+	const sideBand = bandMaterial(depth);
+	for (const side of [-1, 1]) roundedBox(machine, [wall, bandHeight, depth - 2 * wall], [side * (width / 2 - wall / 2), bandY, 0], sideBand, 0.03);
+	roundedBox(machine, [width, glassTop - bandBottom, wall], [0, (glassTop + bandBottom) / 2, -front + wall / 2], mats.backWall, 0.04);
 
-	const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 0.95), new THREE.MeshBasicMaterial({ map: makeSignTexture() }));
-	sign.position.set(0, 6.29, 1.79);
+	// Felt pit floor with the chute opening cut out of the front-left corner, and a dark shaft below it.
+	const holeMaxX = CHUTE.x + CHUTE.halfX + 0.03;
+	const holeMinZ = CHUTE.z - CHUTE.halfZ - 0.03;
+	const floorY = FLOOR_Y - 0.05;
+	box(machine, [innerX - holeMaxX, 0.1, 2 * innerZ], [(innerX + holeMaxX) / 2, floorY, 0], mats.floor);
+	box(machine, [holeMaxX + innerX, 0.1, holeMinZ + innerZ], [(holeMaxX - innerX) / 2, floorY, (holeMinZ - innerZ) / 2], mats.floor);
+	const shaftBottom = bandBottom + 0.01;
+	const shaftHeight = FLOOR_Y - shaftBottom;
+	const shaftY = (FLOOR_Y + shaftBottom) / 2;
+	const shaftWidth = holeMaxX + innerX;
+	const shaftDepth = innerZ - holeMinZ;
+	const shaftX = (holeMaxX - innerX) / 2;
+	const shaftZ = (holeMinZ + innerZ) / 2;
+	box(machine, [shaftWidth, 0.02, shaftDepth], [shaftX, shaftBottom, shaftZ], mats.hole, false);
+	for (const x of [-innerX + 0.01, holeMaxX]) box(machine, [0.02, shaftHeight, shaftDepth], [x, shaftY, shaftZ], mats.hole, false);
+	for (const z of [holeMinZ, innerZ - 0.01]) box(machine, [shaftWidth, shaftHeight, 0.02], [shaftX, shaftY, z], mats.hole, false);
+
+	// Clear acrylic prize chute with white rims over the drop hole.
+	const chuteWallHeight = CHUTE.rimY + 0.04 - FLOOR_Y;
+	const chuteWallY = FLOOR_Y + chuteWallHeight / 2;
+	const chuteW = CHUTE.halfX * 2 + 0.06;
+	const chuteD = CHUTE.halfZ * 2 + 0.06;
+	for (const side of [-1, 1]) {
+		box(machine, [chuteW, chuteWallHeight, 0.025], [CHUTE.x, chuteWallY, CHUTE.z + side * chuteD / 2], acrylic, false);
+		box(machine, [0.025, chuteWallHeight, chuteD], [CHUTE.x + side * chuteW / 2, chuteWallY, CHUTE.z], acrylic, false);
+		box(machine, [chuteW + 0.04, 0.04, 0.05], [CHUTE.x, CHUTE.rimY + 0.04, CHUTE.z + side * chuteD / 2], mats.shell, false);
+		box(machine, [0.05, 0.04, chuteD + 0.04], [CHUTE.x + side * chuteW / 2, CHUTE.rimY + 0.04, CHUTE.z], mats.shell, false);
+	}
+
+	// Frameless glass with rounded front corners, white posts at the back and cyan LED strips framing the backboard.
+	const glassHeight = glassTop - lip;
+	const glassY = (glassTop + lip) / 2;
+	box(machine, [2 * (glassX - cornerRadius), glassHeight, 0.03], [0, glassY, glassZ], glass, false);
+	for (const side of [-1, 1]) {
+		const corner = new THREE.Mesh(
+			new THREE.CylinderGeometry(cornerRadius, cornerRadius, glassHeight, 20, 1, true, side > 0 ? 0 : -Math.PI / 2, Math.PI / 2),
+			glass,
+		);
+		corner.position.set(side * (glassX - cornerRadius), glassY, glassZ - cornerRadius);
+		machine.add(corner);
+		box(machine, [0.03, glassHeight, glassZ - cornerRadius + innerZ], [side * glassX, glassY, (glassZ - cornerRadius - innerZ) / 2], glass, false);
+		box(machine, [wall, glassHeight, 0.2], [side * (width / 2 - wall / 2), glassY, -innerZ + 0.1], mats.shell);
+		neonLine(machine, [side * (innerX - 0.06), lip + 0.2, -innerZ + 0.05], [side * (innerX - 0.06), glassTop - 0.25, -innerZ + 0.05], "cyan");
+	}
+
+	// Header lightbox with a pink neon frame, a cyan strip along its lower edge and an LED panel lighting the pit.
+	const headerHeight = top - glassTop;
+	const headerY = glassTop + headerHeight / 2;
+	roundedBox(machine, [width + 0.06, headerHeight, depth + 0.04], [0, headerY, 0.02], mats.shell, 0.08);
+	const signWidth = width - 0.5;
+	const signHeight = headerHeight - 0.32;
+	const sign = new THREE.Mesh(new THREE.PlaneGeometry(signWidth, signHeight), new THREE.MeshBasicMaterial({ map: makeSignTexture() }));
+	sign.position.set(0, headerY, front + 0.05);
 	machine.add(sign);
-	for (let index = 0; index < 11; index += 1) {
-		const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 10), new THREE.MeshBasicMaterial({ color: index % 2 ? "#e9bd64" : "#f5e7bb" }));
-		bulb.position.set(-3.1 + index * 0.62, 5.99, 1.78);
-		machine.add(bulb);
-	}
+	const signFrame = roundedRectShape(signWidth + 0.14, signHeight + 0.14, 0.12);
+	neonTube(machine, new OutlineCurve(signFrame, (point, target) => target.set(point.x, headerY + point.y, front + 0.07)), "pink", { segments: 160, closed: true });
+	neonLine(machine, [-width / 2 + 0.12, glassTop + 0.07, front + 0.06], [width / 2 - 0.12, glassTop + 0.07, front + 0.06], "cyan");
+	box(machine, [2 * innerX - 0.3, 0.015, 2 * innerZ - 0.3], [0, glassTop - 0.01, 0], mats.led, false);
 
-	box(machine, [7.55, 0.13, 0.13], [0, 5.73, -0.72], mats.metal);
-	box(machine, [0.13, 0.1, 2.35], [0, 5.7, 0.02], mats.metal);
-	box(machine, [1.3, 0.25, 0.82], [0, 5.54, 0.02], mats.frame);
+	// Overhead gantry rails (the moving bridge and carriage are built with the claw).
+	for (const z of [-RAIL_Z, RAIL_Z]) box(machine, [2 * innerX - 0.06, 0.1, 0.12], [0, CARRIAGE_Y + 0.16, z], mats.rail);
 
+	// Control console jutting out of the front-left, edged with a pink LED strip.
 	const panel = new THREE.Group();
-	panel.position.set(0, 0.71, 1.53);
-	panel.rotation.x = -0.16;
+	const panelWidth = 2.4;
+	const panelDepth = 0.95;
+	const panelThickness = 0.3;
+	const panelBase = bandBottom - 0.12 - panelThickness;
+	const panelTop = panelBase + panelThickness + 0.02;
+	panel.position.set(-width / 2 + panelWidth / 2, 0, front + panelDepth / 2 - 0.15);
 	machine.add(panel);
-	box(panel, [8.5, 0.16, 0.86], [0, 0, 0], mats.ink);
-	box(panel, [8.28, 0.05, 0.68], [0, 0.1, -0.02], mats.frame);
-	for (const x of [-1.4, 0, 1.4]) {
-		const button = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.11, 24), x === 0 ? mats.coral : mats.gold);
-		button.position.set(x, 0.19, 0.02);
-		button.castShadow = true;
-		panel.add(button);
-	}
-	const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.32, 12), mats.metal);
-	stick.position.set(2.35, 0.27, 0.02);
-	stick.rotation.z = -0.18;
-	panel.add(stick);
-	sphere(panel, [2.41, 0.44, 0.02], [0.12, 0.12, 0.12], mats.coral, 16);
+	slab(panel, roundedRectShape(panelWidth, panelDepth, 0.16), panelThickness, panelBase, mats.shell);
+	const panelEdge = roundedRectShape(panelWidth + 0.05, panelDepth + 0.05, 0.18);
+	neonTube(panel, new OutlineCurve(panelEdge, (point, target) => target.set(point.x, panelTop - 0.05, point.y)), "pink", { segments: 140, closed: true });
+	const icons = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.2), new THREE.MeshBasicMaterial({ map: makePanelIconTexture(), transparent: true }));
+	icons.position.set(0, panelBase + panelThickness * 0.42, panelDepth / 2 + 0.025);
+	panel.add(icons);
+	panelStick = new THREE.Group();
+	panelStick.position.set(-0.62, panelTop, 0.12);
+	panel.add(panelStick);
+	cylinder(panelStick, 0.15, 0.03, [0, 0.015, 0], mats.trim, 32);
+	cylinder(panelStick, 0.07, 0.07, [0, 0.06, 0], mats.chrome);
+	cylinder(panelStick, 0.024, 0.32, [0, 0.24, 0], mats.chrome, 12);
+	sphere(panelStick, [0, 0.45, 0], [0.12, 0.12, 0.12], mats.ballPurple, 28);
+	const screen = new THREE.Group();
+	screen.position.set(0.02, panelTop + 0.13, -0.25);
+	screen.rotation.x = -0.5;
+	panel.add(screen);
+	roundedBox(screen, [0.66, 0.36, 0.08], [0, 0, 0], mats.trim, 0.025);
+	box(screen, [0.56, 0.27, 0.01], [0, 0, 0.041], mats.screenBlue, false);
+	cylinder(panel, 0.18, 0.05, [0.62, panelTop + 0.02, 0.12], mats.chrome, 32);
+	sphere(panel, [0.62, panelTop + 0.05, 0.12], [0.135, 0.06, 0.135], mats.buttonPink, 28);
 
-	box(machine, [0.52, 0.64, 0.68], [3.45, 0.94, 1.02], mats.gold);
-	box(machine, [0.34, 0.16, 0.72], [3.45, 1.31, 1.02], mats.ink);
-	box(machine, [0.48, 0.12, 0.48], [3.45, 0.81, 1.02], mats.black);
-	box(machine, [0.31, 0.08, 0.34], [3.45, 0.76, 1.02], mats.coral);
+	// Round push-flap prize door under the console, ringed in cyan neon.
+	const doorX = panel.position.x;
+	const doorY = -1.05;
+	const doorRadius = 0.5;
+	const door = new THREE.Mesh(new THREE.CircleGeometry(doorRadius, 48), new THREE.MeshStandardMaterial({ map: makePrizeDoorTexture(), roughness: 0.16, envMapIntensity: 1.2 }));
+	door.position.set(doorX, doorY, front + 0.012);
+	machine.add(door);
+	const bezel = new THREE.Mesh(new THREE.TorusGeometry(doorRadius + 0.02, 0.035, 12, 64), mats.chrome);
+	bezel.position.set(doorX, doorY, front + 0.01);
+	machine.add(bezel);
+	neonRing(machine, [doorX, doorY, front + 0.03], doorRadius + 0.11, "cyan");
+
+	// Payment column on the right: bill/card reader, price label, coin door and lockable cash box.
+	const pay = new THREE.Group();
+	pay.position.set(1.22, 0, front);
+	machine.add(pay);
+	box(pay, [1.05, 2.15, 0.02], [0, -0.92, 0.01], mats.shellShade, false);
+	roundedBox(pay, [0.62, 0.36, 0.1], [0, -0.05, 0.05], mats.trim, 0.03);
+	box(pay, [0.42, 0.025, 0.02], [0, 0.04, 0.1], mats.hole, false);
+	box(pay, [0.26, 0.11, 0.01], [0, -0.1, 0.101], mats.screenBlue, false);
+	const priceLabel = new THREE.Mesh(new THREE.PlaneGeometry(0.64, 0.16), new THREE.MeshStandardMaterial({ map: makePriceLabelTexture(), roughness: 0.5 }));
+	priceLabel.position.set(0, -0.36, 0.022);
+	pay.add(priceLabel);
+	roundedBox(pay, [0.52, 0.82, 0.06], [0, -0.92, 0.04], mats.steel, 0.02);
+	box(pay, [0.05, 0.18, 0.02], [-0.1, -0.7, 0.075], mats.hole, false);
+	faceForward(cylinder(pay, 0.05, 0.03, [0.11, -0.7, 0.08], mats.chrome, 20));
+	box(pay, [0.24, 0.14, 0.04], [0, -1.18, 0.075], mats.hole, false);
+	faceForward(cylinder(pay, 0.035, 0.03, [0.17, -0.95, 0.08], mats.chrome, 16));
+	roundedBox(pay, [0.8, 0.62, 0.04], [0, -1.68, 0.03], mats.shell, 0.015);
+	faceForward(cylinder(pay, 0.045, 0.03, [0.26, -1.68, 0.06], mats.chrome, 20));
 }
 
 const mapDefinitions = {
 	animals: {
 		label: "동물 인형",
 		toys: [
-			[-3.35, -0.85, "bear", "#e8846d"], [-2.4, 0.62, "duck", "#edc862"], [-1.45, -0.8, "frog", "#89bf98"],
-			[-0.48, 0.68, "bunny", "#c397c9"], [0.48, -0.84, "cat", "#ed9a76"], [1.42, 0.66, "bear", "#7fb4c4"],
-			[2.36, -0.82, "bunny", "#e997a2"], [3.25, 0.61, "frog", "#a4a0d2"], [-2.88, -0.12, "cat", "#e6aa77"],
-			[-0.02, -0.1, "chick", "#efcf79"], [2.82, -0.13, "bear", "#9bc4a7"],
+			[-1.58, -1.06, "bear", "#e8846d"], [-0.3, 0.97, "duck", "#edc862"], [-0.5, -1.1, "frog", "#89bf98"],
+			[0.62, 0.98, "bunny", "#c397c9"], [0.56, -1.06, "cat", "#ed9a76"], [1.6, 0.95, "bear", "#7fb4c4"],
+			[1.6, -1.1, "bunny", "#e997a2"], [1.56, -0.06, "frog", "#a4a0d2"], [-1.6, -0.15, "cat", "#e6aa77"],
+			[-0.54, -0.04, "chick", "#efcf79"], [0.5, -0.07, "bear", "#9bc4a7"],
 		],
 	},
 	politics: {
 		label: "찢토피아",
 		toys: [
-			[-3, -0.85, "chizzilla", "#aaa19a"], [-0.8, -0.55, "mulcorita", "#8fba9c"], [2.4, -0.95, "moonkorita", "#8fba9c"],
-			[-2.2, 0.75, "chizzilla", "#aaa19a"], [0.65, 0.45, "mulcorita", "#8fba9c"], [3.1, 0.9, "moonkorita", "#8fba9c"],
+			[-1.4, -0.95, "chizzilla", "#aaa19a"], [0.05, -1.0, "mulcorita", "#8fba9c"], [1.45, -1.0, "moonkorita", "#8fba9c"],
+			[-1.35, -0.1, "chizzilla", "#aaa19a"], [0.15, 0.4, "mulcorita", "#8fba9c"], [1.4, 0.75, "moonkorita", "#8fba9c"],
 		],
 	},
 };
@@ -538,30 +879,38 @@ let respawnAt = loadRespawnTimes(activeMapId);
 const restockLabel = document.querySelector("#restock");
 
 function addEars(group, kind, color) {
+	const firstEarPart = group.children.length;
+	addEarParts(group, kind, color);
+	// Ears fold under the claw, so they are left out of the plush's contact shape.
+	for (const part of group.children.slice(firstEarPart)) part.userData.softEar = true;
+}
+
+function addEarParts(group, kind, color) {
 	if (kind === "chizzilla") {
 		for (const side of [-1, 1]) {
 			sphere(group, [side * 0.25, 1.16, -0.015], [0.145, 0.27, 0.11], plush(color), 20);
 			sphere(group, [side * 0.25, 1.17, 0.078], [0.085, 0.19, 0.025], blushMaterial, 18);
 		}
 	} else if (kind === "bunny") {
+		// Long floppy ears: thin stuffed panels that droop outwards under their own weight.
 		for (const side of [-1, 1]) {
-			const ear = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.35, 4, 10), plush(color));
-			ear.position.set(side * 0.16, 1.29, 0);
-			ear.rotation.z = side * -0.1;
-			ear.castShadow = true;
-			group.add(ear);
-			sphere(group, [side * 0.16, 1.3, 0.075], [0.04, 0.19, 0.025], blushMaterial, 14);
+			const ear = puff(group, [side * 0.17, 1.27, -0.01], [0.095, 0.27, 0.05], plush(color), { seam: false, variant: side + 2 });
+			ear.rotation.set(-0.12, side * 0.18, side * -0.24);
+			const inner = puff(group, [side * 0.175, 1.26, 0.03], [0.05, 0.2, 0.02], blushMaterial, { variant: 3 });
+			inner.rotation.copy(ear.rotation);
 		}
 	} else if (kind === "bear") {
 		for (const side of [-1, 1]) {
-			sphere(group, [side * 0.23, 1.02, 0], [0.15, 0.16, 0.13], plush(color));
-			sphere(group, [side * 0.23, 1.02, 0.105], [0.075, 0.08, 0.035], blushMaterial, 14);
+			puff(group, [side * 0.235, 1.02, -0.01], [0.15, 0.14, 0.075], plush(color), { variant: 1 });
+			puff(group, [side * 0.235, 1.02, 0.055], [0.08, 0.075, 0.02], blushMaterial, { variant: 2 });
 		}
 	} else if (kind === "cat") {
+		// Fabric ears are two flat triangles sewn together, so they stay thin and slightly rounded.
 		for (const side of [-1, 1]) {
-			const ear = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.31, 5), plush(color));
-			ear.position.set(side * 0.22, 1.12, 0);
-			ear.rotation.z = side * -0.2;
+			const ear = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.28, 24, 3), plush(color));
+			ear.position.set(side * 0.21, 1.1, -0.01);
+			ear.scale.z = 0.42;
+			ear.rotation.z = side * -0.24;
 			ear.castShadow = true;
 			group.add(ear);
 		}
@@ -581,15 +930,15 @@ const politicalTieColors = {
 };
 
 function addPoliticalDetails(group, kind) {
-	sphere(group, [0, 1.08, 0.015], [0.29, 0.12, 0.26], material("#413b36", 0.97), 18);
-	box(group, [0.075, 0.24, 0.045], [0, 0.4, 0.307], material(politicalTieColors[kind], 0.8));
+	puff(group, [0, 1.08, 0.015], [0.29, 0.12, 0.26], plushFabric("#413b36", { nap: 1 }), { seam: true, variant: 2 });
+	box(group, [0.075, 0.24, 0.045], [0, 0.4, 0.307], feltFabric(politicalTieColors[kind]));
 	sphere(group, [0, 0.55, 0.312], [0.065, 0.035, 0.025], bellyMaterial, 14);
 	sphere(group, [0.2, 0.4, 0.292], [0.035, 0.035, 0.025], mats.gold, 14);
 }
 
 function addSignatureDetails(group, kind) {
 	if (kind === "moonjaeger") {
-		const scarf = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.38, 4, 8), material("#a84f43", 0.9));
+		const scarf = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.38, 6, 16), feltFabric("#a84f43"));
 		scarf.position.set(0.15, 0.67, 0.31);
 		scarf.rotation.z = -0.28;
 		scarf.castShadow = true;
@@ -636,41 +985,57 @@ function makeToy([x, z, kind, color], index, addToScene = true) {
 		if (addToScene) scene.add(group);
 		return { group, x, z, kind, color, index, weight: 0.92, baseScale: 1.04 };
 	}
-	group.rotation.y = (index % 3 - 1) * 0.12;
+	// Plush in a real machine lie where they were dumped: turned every which way and slumped back or to one side.
+	const pose = seededRandom(index * 7919 + kind.length * 131 + 17);
+	const restTiltX = -0.06 - pose() * 0.16;
+	const restTiltZ = (pose() - 0.5) * 0.26;
+	group.rotation.set(restTiltX, (pose() - 0.5) * 1.2, restTiltZ);
+	const variant = index % 4;
 	const fur = plush(color);
-	sphere(group, [0, 0.34, 0], [0.34, 0.39, 0.29], fur, 24);
-	sphere(group, [0, 0.81, 0.015], [0.35, 0.34, 0.3], fur, 24);
+	puff(group, [0, 0.34, 0], [0.34, 0.39, 0.29], fur, { seam: true, flatBottom: true, variant });
+	puff(group, [0, 0.81, 0.015], [0.35, 0.34, 0.3], fur, { seam: true, variant: variant + 4 });
 	for (const side of [-1, 1]) {
-		sphere(group, [side * 0.33, 0.39, 0.015], [0.14, 0.24, 0.15], fur, 18);
-		sphere(group, [side * 0.2, 0.08, 0.08], [0.19, 0.12, 0.2], fur, 18);
+		const arm = puff(group, [side * 0.33, 0.39, 0.03], [0.13, 0.23, 0.14], fur, { variant: variant + side + 2 });
+		arm.rotation.z = side * (0.2 + pose() * 0.25);
+		arm.rotation.x = -0.15 - pose() * 0.2;
+		const leg = puff(group, [side * 0.19, 0.08, 0.1], [0.17, 0.11, 0.2], fur, { flatBottom: true, variant: variant + side + 6 });
+		leg.rotation.y = side * (0.15 + pose() * 0.2);
 	}
 	addEars(group, kind, color);
-	sphere(group, [0, 0.35, 0.264], [0.19, 0.18, 0.04], bellyMaterial, 18);
+	puff(group, [0, 0.33, 0.25], [0.2, 0.19, 0.05], bellyMaterial, { variant });
+	// Sewn-in care label at the side seam.
+	const tag = box(group, [0.004, 0.11, 0.07], [0.29, 0.12, -0.14], tagMaterial, false);
+	tag.rotation.set(0.2, 0.4, -0.5);
+	tag.userData.softEar = true;
 	if (politicalKinds.has(kind)) addPoliticalDetails(group, kind);
 	if (kind === "chizzilla" || kind === "moonjaeger") addSignatureDetails(group, kind);
 	if (kind === "frog") {
-		for (const side of [-1, 1]) sphere(group, [side * 0.2, 1.08, 0.11], [0.14, 0.16, 0.13], fur, 18);
+		for (const side of [-1, 1]) puff(group, [side * 0.2, 1.06, 0.1], [0.14, 0.15, 0.13], fur, { variant: variant + side + 4 });
 	}
 	if (kind === "chick" || kind === "duck") {
 		for (const side of [-1, 1]) sphere(group, [side * 0.32, 0.48, 0], [0.1, 0.18, 0.12], fur, 16);
 		const beak = kind === "duck"
-			? new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), mats.coral)
-			: new THREE.Mesh(new THREE.ConeGeometry(0.095, 0.15, 3), mats.coral);
-		beak.position.set(0, 0.78, 0.31);
-		beak.scale.set(0.13, 0.07, 0.07);
+			? new THREE.Mesh(puffGeometry({ variant: 5 }), beakMaterial)
+			: new THREE.Mesh(new THREE.ConeGeometry(0.095, 0.15, 16), beakMaterial);
+		beak.position.set(0, 0.76, 0.3);
+		beak.scale.set(kind === "duck" ? 0.12 : 0.6, kind === "duck" ? 0.05 : 0.6, kind === "duck" ? 0.08 : 0.4);
 		if (kind === "chick") beak.rotation.x = Math.PI / 2;
 		group.add(beak);
 	}
 	if (kind !== "chizzilla") {
+		// Domed plastic safety eyes set into the fabric, felt cheeks, and an embroidered nose and mouth.
 		for (const side of [-1, 1]) {
-			sphere(group, [side * 0.13, 0.84, 0.277], [0.045, 0.06, 0.035], eyeMaterial, 16);
-			sphere(group, [side * 0.22, 0.72, 0.265], [0.045, 0.025, 0.02], blushMaterial, 14);
+			sphere(group, [side * 0.125, 0.84, 0.272], [0.042, 0.042, 0.028], eyeMaterial, 24);
+			puff(group, [side * 0.215, 0.72, 0.258], [0.042, 0.024, 0.012], blushMaterial, { variant: 2 });
 		}
-		sphere(group, [0, 0.75, 0.29], [0.055, 0.04, 0.035], mats.coral, 14);
-		const smileCurve = new THREE.QuadraticBezierCurve3(
-			new THREE.Vector3(-0.06, 0.68, 0.29), new THREE.Vector3(0, 0.63, 0.32), new THREE.Vector3(0.06, 0.68, 0.29),
-		);
-		group.add(new THREE.Mesh(new THREE.TubeGeometry(smileCurve, 8, 0.012, 6, false), eyeMaterial));
+		if (kind !== "chick" && kind !== "duck") {
+			puff(group, [0, 0.755, 0.296], [0.045, 0.03, 0.018], threadMaterial, { variant: 1 });
+			const smileCurve = new THREE.CatmullRomCurve3([
+				new THREE.Vector3(-0.055, 0.69, 0.285), new THREE.Vector3(-0.025, 0.668, 0.299), new THREE.Vector3(0, 0.684, 0.302),
+				new THREE.Vector3(0.025, 0.668, 0.299), new THREE.Vector3(0.055, 0.69, 0.285),
+			]);
+			group.add(new THREE.Mesh(new THREE.TubeGeometry(smileCurve, 16, 0.007, 6, false), threadMaterial));
+		}
 	}
 	const baseScale = 0.9 + (index % 4) * 0.045;
 	group.scale.setScalar(baseScale);
@@ -685,23 +1050,34 @@ function makeToy([x, z, kind, color], index, addToScene = true) {
 	return { group, x, z, kind, color, index, weight, baseScale };
 }
 
+function spawnToy(data, index) {
+	const toy = makeToy(data, index);
+	// Restocked plush is tossed in from above if something now sits on its spot.
+	const [x, z] = data;
+	if (toys.some((other) => Math.hypot(other.x - x, other.z - z) < 0.75)) toy.group.position.y += 1.1;
+	toys.push(toy);
+	addToyPhysics(toy);
+	return toy;
+}
+
 function resetToys() {
-	for (const toy of toys) scene.remove(toy.group);
+	for (const toy of toys) {
+		scene.remove(toy.group);
+		removeToyPhysics(toy);
+	}
 	toys.length = 0;
 	initialToyData.forEach((data, index) => {
-		if (respawnAt[index] <= Date.now()) toys.push(makeToy(data, index));
+		if (respawnAt[index] <= Date.now()) spawnToy(data, index);
 	});
 }
 
 function switchMap(mapId) {
 	if (mapId === activeMapId) return false;
 	if (mapId === "politics" && !politicsPaymentAuthorized) return false;
-	if (clawState.mode !== "ready") {
+	if (!clawIsIdle()) {
 		status.textContent = "집게가 돌아온 뒤 맵을 바꿀 수 있어요.";
 		return false;
 	}
-	for (const toy of toys) scene.remove(toy.group);
-	toys.length = 0;
 	activeMapId = mapId;
 	if (mapId === "politics") politicsPaymentAuthorized = false;
 	initialToyData = mapDefinitions[activeMapId].toys;
@@ -711,16 +1087,12 @@ function switchMap(mapId) {
 	mapPoliticsButton.setAttribute("aria-pressed", String(activeMapId === "politics"));
 	const stageLabel = document.querySelector(".stage-label");
 	stageLabel.textContent = mapDefinitions[activeMapId].label.toUpperCase();
-	const sceneColor = activeMapId === "politics" ? "#e5e2dc" : "#dcebe0";
+	const sceneColor = activeMapId === "politics" ? "#d6d0c4" : "#cfcac2";
 	scene.background.set(sceneColor);
 	scene.fog.color.set(sceneColor);
-	interiorLight.color.set(activeMapId === "politics" ? "#f4e3c2" : "#ffdf9c");
+	interiorLight.color.set(activeMapId === "politics" ? "#fff1dc" : "#f6f8ff");
 	resetToys();
-	clawState.x = -3.35;
-	clawState.z = 0;
-	clawState.cable = 0;
-	resetClawPhysics();
-	updateClaw(0);
+	clawControl?.reset();
 	updateRestockStatus();
 	status.textContent = activeMapId === "politics" ? "찢토피아로 이동했어요." : "동물 인형으로 이동했어요.";
 	setBusy(false);
@@ -729,7 +1101,7 @@ function switchMap(mapId) {
 
 async function enterPoliticsRoom() {
 	if (politicsEntryPending || activeMapId === "politics") return;
-	if (clawState.mode !== "ready") {
+	if (!clawIsIdle()) {
 		status.textContent = "집게가 돌아온 뒤 찢토피아에 입장할 수 있어요.";
 		return;
 	}
@@ -790,7 +1162,7 @@ async function enterPoliticsRoom() {
 		politicsEntryPending = false;
 		mapAnimalsButton.disabled = false;
 		mapPoliticsButton.disabled = false;
-		setBusy(clawState.mode !== "ready");
+		setBusy(!clawIsIdle());
 	}
 }
 
@@ -822,12 +1194,12 @@ function updateRespawns(now = Date.now()) {
 	for (let index = 0; index < respawnAt.length; index += 1) {
 		if (respawnAt[index] === 0 || respawnAt[index] > now) continue;
 		respawnAt[index] = 0;
-		if (!toys.some((toy) => toy.index === index)) toys.push(makeToy(initialToyData[index], index));
+		if (!toys.some((toy) => toy.index === index)) spawnToy(initialToyData[index], index);
 		changed = true;
 	}
 	if (changed) {
 		saveRespawnTimes();
-		setBusy(clawState.mode !== "ready");
+		setBusy(!clawIsIdle());
 	}
 	updateRestockStatus(now);
 }
@@ -840,51 +1212,157 @@ function startRespawnCooldown(index) {
 
 const gantry = new THREE.Group();
 machine.add(gantry);
+const bridge = new THREE.Group();
+gantry.add(bridge);
+box(bridge, [0.16, 0.12, 2 * RAIL_Z + 0.1], [0, CARRIAGE_Y + 0.1, 0], mats.rail);
+for (const z of [-RAIL_Z, RAIL_Z]) box(bridge, [0.3, 0.16, 0.2], [0, CARRIAGE_Y + 0.1, z], mats.carriage);
 const carriage = new THREE.Group();
 gantry.add(carriage);
-box(carriage, [0.92, 0.28, 0.7], [0, -0.04, 0], mats.frame);
-box(carriage, [0.56, 0.12, 0.46], [0, -0.22, 0], mats.gold);
-const swingPivot = new THREE.Group();
-carriage.add(swingPivot);
-const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1, 12), mats.metal);
-swingPivot.add(cable);
+roundedBox(carriage, [0.6, 0.36, 0.5], [0, 0.1, 0], mats.carriage, 0.05);
+box(carriage, [0.42, 0.03, 0.34], [0, -0.09, 0], mats.rail, false);
+// The cable hangs from the carriage pulley to the claw head and is re-aimed every frame, since the claw swings freely.
+const cableRig = new THREE.Group();
+machine.add(cableRig);
+const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1, 8), mats.wire);
+cableRig.add(cable);
+// Coiled cord that stretches between the carriage and the claw head like a spring.
+const coilTurns = 18;
+const coilTop = -0.02;
+const coilOffsetX = -0.13;
+const coilCord = new THREE.Mesh(new THREE.BufferGeometry(), mats.wire);
+coilCord.castShadow = true;
+cableRig.add(coilCord);
+let coilLength = -1;
+function updateCoilCord(cableLength) {
+	const length = Math.max(0.06, cableLength + coilTop + 0.1);
+	if (Math.abs(length - coilLength) < 0.015) return;
+	coilLength = length;
+	const points = [];
+	const steps = coilTurns * 12;
+	for (let index = 0; index <= steps; index += 1) {
+		const t = index / steps;
+		const angle = t * coilTurns * Math.PI * 2;
+		points.push(new THREE.Vector3(coilOffsetX + Math.cos(angle) * 0.055, coilTop - t * length, Math.sin(angle) * 0.055));
+	}
+	coilCord.geometry.dispose();
+	coilCord.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), steps, 0.013, 5, false);
+}
+// Drawn in model units and scaled like the simulated claw; its pose is copied from the rigid bodies every frame.
 const claw = new THREE.Group();
-swingPivot.add(claw);
-sphere(claw, [0, 0, 0], [0.22, 0.12, 0.22], mats.metal, 18);
-sphere(claw, [0, -0.16, 0], [0.14, 0.12, 0.14], mats.gold, 18);
+claw.scale.setScalar(CLAW_GEOMETRY.scale);
+machine.add(claw);
+cylinder(claw, 0.06, 0.08, [0, 0.2, 0], mats.chrome, 18);
+cylinder(claw, 0.15, 0.035, [0, 0.15, 0], mats.chrome, 28);
+cylinder(claw, 0.1, 0.22, [0, 0.03, 0], mats.chrome, 24);
+cylinder(claw, 0.14, 0.035, [0, -0.09, 0], mats.chrome, 28);
+cylinder(claw, 0.075, 0.08, [0, -0.15, 0], mats.chrome, 18);
+const fingerCurve = new THREE.CatmullRomCurve3(CLAW_GEOMETRY.prong.map(([down, out]) => new THREE.Vector3(0, down, out)));
+const fingerGeometry = new THREE.TubeGeometry(fingerCurve, 24, 0.018, 8, false);
+const [fingerTipDown, fingerTipOut] = CLAW_GEOMETRY.prong.at(-1);
 const fingers = [];
 for (let index = 0; index < 3; index += 1) {
-	const finger = new THREE.Group();
-	finger.rotation.y = index * (Math.PI * 2 / 3);
-	claw.add(finger);
-	const segment = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 0.31, 4, 8), mats.metal);
-	segment.position.set(0, -0.31, 0.16);
-	segment.rotation.x = -0.12;
-	finger.add(segment);
-	sphere(finger, [0, -0.51, 0.16], [0.065, 0.065, 0.065], mats.ink, 12);
-	fingers.push(finger);
+	const arm = new THREE.Group();
+	arm.rotation.y = index * (Math.PI * 2 / 3);
+	claw.add(arm);
+	const hinge = new THREE.Group();
+	hinge.position.set(0, CLAW_GEOMETRY.hinge.y, CLAW_GEOMETRY.hinge.radial);
+	hinge.rotation.x = -CLAW_GEOMETRY.openAngle;
+	arm.add(hinge);
+	const prong = new THREE.Mesh(fingerGeometry, mats.chrome);
+	prong.castShadow = true;
+	hinge.add(prong);
+	sphere(hinge, [0, 0, 0], [0.032, 0.032, 0.032], mats.chrome, 12);
+	sphere(hinge, [0, fingerTipDown, fingerTipOut], [0.026, 0.026, 0.026], mats.chrome, 10);
+	fingers.push(hinge);
 }
 
-const clawState = {
-	x: -3.35, z: 0, vx: 0, vz: 0, cable: 0, mode: "ready", target: null, delivered: false,
-	modeTime: 0, gripQuality: 0, swing: createSwing(), cableSpeed: 0, strength: 0, slip: 0, shake: 0,
-	grabbed: false, slack: 0, contactX: 0, contactZ: 0, holdX: 0, holdZ: 0, failMessage: "",
-	releasedToy: null, holdVelocity: new THREE.Vector3(), lastHang: new THREE.Vector3(), hasLastHang: false,
+// Rigid-body simulation of the claw and every plush. Rapier is loaded on demand so the page still works while it downloads.
+const PIT = {
+	halfX: CABINET.width / 2 - CABINET.wall,
+	halfZ: CABINET.depth / 2 - CABINET.wall,
+	top: CABINET.glassTop,
+	shaftBottom: CABINET.bandBottom + 0.01,
 };
-const hangPoint = new THREE.Vector3();
+const clawModeStorageKey = "plush-club-claw-mode-v1";
+let clawDifficulty = "fun";
+try { if (localStorage.getItem(clawModeStorageKey) === "realistic") clawDifficulty = "realistic"; } catch { /* Fun mode by default. */ }
+let clawSim = null;
+let clawControl = null;
+let physicsLag = 0;
+let roundExplained = false;
+let nextPhysicsId = 1;
+const toyByPhysicsId = new Map();
 
-function resetClawPhysics() {
-	clawState.vx = 0;
-	clawState.vz = 0;
-	clawState.swing = createSwing();
-	clawState.cableSpeed = 0;
-	clawState.slip = 0;
-	clawState.shake = 0;
-	clawState.grabbed = false;
-	clawState.releasedToy = null;
-	clawState.hasLastHang = false;
-	clawState.failMessage = "";
+function clawIsIdle() {
+	return !clawControl || clawControl.state.mode === "ready";
 }
+
+// Each sizeable mesh of a plush becomes one convex hull, expressed in the plush's unscaled body frame.
+const hullFrame = new THREE.Matrix4();
+const hullPartMatrix = new THREE.Matrix4();
+const hullVertex = new THREE.Vector3();
+const unitScale = new THREE.Vector3(1, 1, 1);
+function plushHullParts(toy) {
+	const { group } = toy;
+	group.updateWorldMatrix(true, true);
+	hullFrame.compose(group.position, group.quaternion, unitScale).invert();
+	const parts = [];
+	group.traverse((object) => {
+		const position = object.isMesh ? object.geometry?.attributes?.position : null;
+		if (!position) return;
+		if (!object.geometry.boundingSphere) object.geometry.computeBoundingSphere();
+		hullPartMatrix.multiplyMatrices(hullFrame, object.matrixWorld);
+		const radius = object.geometry.boundingSphere.radius * hullPartMatrix.getMaxScaleOnAxis();
+		// Eyes, stitching and labels are too small to matter for contacts.
+		if (radius < 0.07) return;
+		const stride = Math.max(1, Math.floor(position.count / 160));
+		const points = [];
+		for (let index = 0; index < position.count; index += stride) {
+			hullVertex.fromBufferAttribute(position, index).applyMatrix4(hullPartMatrix);
+			points.push(hullVertex.x, hullVertex.y, hullVertex.z);
+		}
+		parts.push({ radius, points: new Float32Array(points) });
+	});
+	return parts.sort((a, b) => b.radius - a.radius).slice(0, 24).map((part) => part.points);
+}
+
+function addToyPhysics(toy) {
+	if (!clawSim || toy.physics) return;
+	const id = nextPhysicsId;
+	nextPhysicsId += 1;
+	const { position, quaternion } = toy.group;
+	toy.physics = clawSim.addToy(id, {
+		position: { x: position.x, y: position.y, z: position.z },
+		rotation: { x: quaternion.x, y: quaternion.y, z: quaternion.z, w: quaternion.w },
+		parts: plushHullParts(toy),
+		mass: plushMass(toy.weight),
+	});
+	toyByPhysicsId.set(id, toy);
+}
+
+function rebuildToyPhysics(toy) {
+	if (clawSim && toy.physics) clawSim.rebuildToy(toy.physics.id, plushHullParts(toy), plushMass(toy.weight));
+}
+
+function removeToyPhysics(toy) {
+	if (!toy.physics) return;
+	toyByPhysicsId.delete(toy.physics.id);
+	clawSim?.removeToy(toy.physics.id);
+	toy.physics = null;
+}
+
+void import("@dimforge/rapier3d-compat").then(async ({ default: RAPIER }) => {
+	await RAPIER.init();
+	clawSim = createClawWorld(RAPIER, { pit: PIT, carriageY: CARRIAGE_Y, home: CLAW_HOME });
+	clawControl = createClawController(clawSim, { home: CLAW_HOME, reach: CLAW_REACH });
+	clawControl.state.difficulty = clawDifficulty;
+	for (const toy of toys) addToyPhysics(toy);
+	clawSim.settle(0.6);
+	syncPhysicsScene();
+	setBusy(false);
+}).catch(() => {
+	status.textContent = "물리 엔진을 불러오지 못했어요. 페이지를 새로고침해 주세요.";
+});
 const keys = new Set();
 const clock = new THREE.Clock();
 const joystickVector = { x: 0, z: 0 };
@@ -1130,7 +1608,7 @@ function makeBagPreview(item) {
 
 function closePrize() {
 	prizeGate.hidden = true;
-	setBusy(clawState.mode !== "ready");
+	setBusy(!clawIsIdle());
 	const focusTarget = prizeReturnFocus?.isConnected
 		? prizeReturnFocus
 		: bagGate.hidden ? dropButton : document.querySelector("#closeBag");
@@ -1501,7 +1979,7 @@ function refreshAccountDisplay() {
 	} else {
 		guestCoinsLabel.textContent = String(guestCoins);
 	}
-	setBusy(clawState.mode !== "ready");
+	setBusy(!clawIsIdle());
 	updateCoinClaimButtons();
 	updateDailyBonusButton();
 }
@@ -1589,12 +2067,17 @@ function isEmailRateLimitError(error) {
 	return detail.includes("email rate limit") || detail.includes("rate limit exceeded") || detail.includes("over_email_send_rate_limit");
 }
 
+function fitDistance(aspect) {
+	const tan = Math.tan(THREE.MathUtils.degToRad(21));
+	return Math.max(machineFit.width / (2 * tan * aspect), machineFit.height / (2 * tan)) * 1.04 / cameraOrbit.zoom;
+}
+
 function resize() {
 	const bounds = canvas.getBoundingClientRect();
 	const width = Math.max(1, bounds.width);
 	const height = Math.max(1, bounds.height);
 	const aspect = width / height;
-	cameraOrbit.distance = Math.max(9.4 / (2 * Math.tan(THREE.MathUtils.degToRad(21)) * aspect), 7.2 / (2 * Math.tan(THREE.MathUtils.degToRad(21)))) * 1.08 / cameraOrbit.zoom;
+	cameraOrbit.distance = fitDistance(aspect);
 	camera.aspect = aspect;
 	updateCameraOrbit();
 	camera.updateProjectionMatrix();
@@ -1604,9 +2087,9 @@ function resize() {
 function updateCameraOrbit() {
 	const horizontalDistance = Math.cos(cameraOrbit.elevation) * cameraOrbit.distance;
 	camera.position.set(
-		Math.sin(cameraOrbit.azimuth) * horizontalDistance,
+		cameraTarget.x + Math.sin(cameraOrbit.azimuth) * horizontalDistance,
 		cameraTarget.y + Math.sin(cameraOrbit.elevation) * cameraOrbit.distance,
-		Math.cos(cameraOrbit.azimuth) * horizontalDistance,
+		cameraTarget.z + Math.cos(cameraOrbit.azimuth) * horizontalDistance,
 	);
 	camera.lookAt(cameraTarget);
 	camera.updateMatrixWorld();
@@ -1616,13 +2099,13 @@ function setCameraZoom(zoom) {
 	cameraOrbit.zoom = THREE.MathUtils.clamp(zoom, 0.7, 1.6);
 	const bounds = canvas.getBoundingClientRect();
 	const aspect = Math.max(1, bounds.width) / Math.max(1, bounds.height);
-	cameraOrbit.distance = Math.max(9.4 / (2 * Math.tan(THREE.MathUtils.degToRad(21)) * aspect), 7.2 / (2 * Math.tan(THREE.MathUtils.degToRad(21)))) * 1.08 / cameraOrbit.zoom;
+	cameraOrbit.distance = fitDistance(aspect);
 	updateCameraOrbit();
 }
 
 function setBusy(busy) {
 	const balance = currentAccount ? currentAccount.coins : guestCoins;
-	dropButton.disabled = busy || politicsEntryPending || toys.length === 0 || !authGate.hidden || !prizeGate.hidden || !bagGate.hidden || !shopGate.hidden || balance < playCost;
+	dropButton.disabled = busy || !clawControl || politicsEntryPending || toys.length === 0 || !authGate.hidden || !prizeGate.hidden || !bagGate.hidden || !shopGate.hidden || balance < playCost;
 }
 
 async function beginDrop() {
@@ -1632,7 +2115,11 @@ async function beginDrop() {
 		showCoinShortage();
 		return;
 	}
-	if (clawState.mode !== "ready" || toys.length === 0) return;
+	if (!clawControl) {
+		status.textContent = "물리 엔진을 불러오는 중이에요. 잠시 후 다시 시도해 주세요.";
+		return;
+	}
+	if (clawControl.state.mode !== "ready" || toys.length === 0) return;
 	if (currentAccount && supabaseClient) {
 		playRequestPending = true;
 		setBusy(true);
@@ -1660,148 +2147,23 @@ async function beginDrop() {
 		saveGuestCoins();
 		guestCoinsLabel.textContent = String(guestCoins);
 	}
-	kickSwing(clawState.swing, -clawState.vx, -clawState.vz, clawState.cable + CLAW_TUNING.armLength);
-	clawState.vx = 0;
-	clawState.vz = 0;
-	clawState.mode = "drop";
-	clawState.target = null;
-	clawState.delivered = false;
-	clawState.grabbed = false;
-	clawState.releasedToy = null;
-	clawState.modeTime = 0;
-	clawState.slip = 0;
-	clawState.shake = 0;
-	clawState.cableSpeed = 0;
-	clawState.failMessage = "";
+	roundExplained = false;
+	clawControl.state.difficulty = clawDifficulty;
+	clawControl.begin();
 	setBusy(true);
 	status.textContent = "집게가 내려가요. 앞뒤 위치도 잘 맞춰 보세요.";
 }
 
-function finishRound() {
-	clawState.mode = "ready";
-	clawState.target = null;
-	clawState.cable = 0;
-	clawState.vx = 0;
-	clawState.vz = 0;
-	if (!clawState.delivered) status.textContent = "아깝다! 인형 위에 집게를 맞춰 다시 해봐요.";
-	clawState.delivered = false;
+function finishRound(delivered) {
+	if (!delivered && !roundExplained) status.textContent = "아깝다! 인형 위에 집게를 맞춰 다시 해봐요.";
 	setBusy(false);
-}
-
-function pendulumLength() {
-	const loaded = clawState.target && clawState.grabbed;
-	return clawState.cable + CLAW_TUNING.armLength + (loaded ? CLAW_TUNING.hangDepth * 0.6 : 0);
-}
-
-function clawTip() {
-	const length = clawState.cable + CLAW_TUNING.armLength;
-	return {
-		x: clawState.x + length * Math.sin(clawState.swing.x),
-		z: clawState.z + length * Math.sin(clawState.swing.z),
-	};
-}
-
-function isAirborne(toy) {
-	return Boolean(toy.body && (toy.body.captured || toy.body.y > FLOOR_Y + 0.25));
-}
-
-function launchToy(toy, velocity) {
-	const { position, rotation, scale } = toy.group;
-	toy.body = createBody({
-		x: position.x, y: position.y, z: position.z,
-		vx: velocity.x, vy: velocity.y, vz: velocity.z,
-		tiltX: rotation.x, tiltZ: rotation.z,
-	});
-	toy.body.baseYaw = rotation.y;
-	toy.body.squash = THREE.MathUtils.clamp(1 - scale.y / toy.baseScale, -0.15, 0.3);
-}
-
-function nudgeToy(toy, fromX, fromZ, strength) {
-	if (!toy || toy.body) return;
-	const dx = toy.x - fromX;
-	const dz = toy.z - fromZ;
-	const distance = Math.hypot(dx, dz) || 1;
-	launchToy(toy, { x: dx / distance * strength, y: strength * 0.7, z: dz / distance * strength });
-}
-
-function pushRestingToy(toy, dx, dz) {
-	const nextX = THREE.MathUtils.clamp(toy.x + dx, BOUNDS.minX, BOUNDS.maxX);
-	const nextZ = THREE.MathUtils.clamp(toy.z + dz, BOUNDS.minZ, BOUNDS.maxZ);
-	if (isOverChute(nextX, nextZ)) return;
-	toy.x = nextX;
-	toy.z = nextZ;
-	toy.group.position.x = nextX;
-	toy.group.position.z = nextZ;
-	toy.group.rotation.z += THREE.MathUtils.clamp(-dx * 3, -0.25, 0.25);
-}
-
-function beginLift() {
-	const target = clawState.target;
-	const alignmentError = Math.hypot(Math.abs(clawState.contactX) / 0.36, Math.abs(clawState.contactZ) / 0.5);
-	clawState.gripQuality = THREE.MathUtils.clamp(1 - alignmentError, 0, 1);
-	const weightFactor = THREE.MathUtils.clamp(1.12 - target.weight * 0.31, 0.5, 0.98);
-	const gripChance = clawState.gripQuality ** 2 * weightFactor;
-	clawState.cableSpeed = 0;
-	clawState.mode = "lift";
-
-	if (alignmentError > 0.95) {
-		// Only the finger tips brushed it, so the plush is shoved aside instead of lifted.
-		target.group.scale.y = target.baseScale;
-		const tip = clawTip();
-		clawState.target = null;
-		clawState.mode = "miss";
-		nudgeToy(target, tip.x, tip.z, 1.1);
-		status.textContent = "인형 중심을 놓쳤어요. 앞뒤와 좌우를 더 정확히 맞춰 보세요.";
-		return;
-	}
-
-	clawState.grabbed = true;
-	clawState.holdX = clawState.contactX * 0.55;
-	clawState.holdZ = clawState.contactZ * 0.55;
-	clawState.slip = 0;
-	clawState.shake = 0;
-	clawState.slack = -1;
-	clawState.hasLastHang = false;
-	clawState.holdVelocity.set(0, 0, 0);
-	let power = sampleClawPower();
-	if (Math.random() > gripChance) {
-		// The fingers never seat properly: the plush rises a little, then slides out.
-		power *= 0.15;
-		clawState.failMessage = alignmentError > 0.48
-			? "인형 중심을 놓쳤어요. 앞뒤와 좌우를 더 정확히 맞춰 보세요."
-			: target.weight > 0.82
-				? "무거운 인형을 들어 올리지 못했어요. 가벼운 인형부터 도전해 보세요."
-				: "집게가 인형을 제대로 감싸지 못했어요.";
-	}
-	clawState.strength = gripStrength(clawState.gripQuality, power);
-	status.textContent = target.weight > 0.82
-		? "무거운 인형이에요! 집게가 버텨야 해요."
-		: "집었어요! 집게가 천천히 들어 올립니다.";
-}
-
-function releaseHeld(message) {
-	const toy = clawState.target;
-	if (!toy) return null;
-	clawState.target = null;
-	clawState.slip = 0;
-	launchToy(toy, clawState.holdVelocity);
-	if (message) status.textContent = message;
-	return toy;
-}
-
-function updateGrip(verticalAccel, step) {
-	const toy = clawState.target;
-	if (!toy || step <= 0) return false;
-	const load = gripLoad({ weight: toy.weight, quality: clawState.gripQuality, verticalAccel, shake: clawState.shake, swing: clawState.swing });
-	clawState.slip = stepSlip(clawState.slip, load, clawState.strength, step);
-	return clawState.slip >= 1;
 }
 
 function collectToy(toy, lucky) {
 	scene.remove(toy.group);
+	removeToyPhysics(toy);
 	const caughtIndex = toys.indexOf(toy);
 	if (caughtIndex >= 0) toys.splice(caughtIndex, 1);
-	if (clawState.releasedToy === toy) clawState.releasedToy = null;
 	startRespawnCooldown(toy.index);
 	if (currentAccount) {
 		currentAccount.bag.push({ id: crypto.randomUUID(), kind: toy.kind, color: toy.color, collectedAt: Date.now() });
@@ -1813,272 +2175,168 @@ function collectToy(toy, lucky) {
 	} else {
 		status.textContent = "로그인하지 않으면 인형이 가방에 모이지 않아요.";
 	}
-	clawState.delivered = true;
+	roundExplained = true;
 	score += 1;
 	scoreLabel.textContent = `${score} 마리`;
 	showPrize(toy);
 }
 
-function updateHeldToy(step) {
-	const toy = clawState.target;
-	carriage.updateMatrixWorld(true);
-	hangPoint.set(clawState.holdX, -CLAW_TUNING.hangDepth - clawState.slip * 0.22, clawState.holdZ);
-	claw.localToWorld(hangPoint);
-	// The claw takes up slack before the plush actually leaves the floor.
-	if (clawState.slack < 0) clawState.slack = Math.max(0, hangPoint.y - toy.group.position.y);
-	else clawState.slack = Math.max(0, clawState.slack - clawState.cableSpeed * step);
-	hangPoint.y -= clawState.slack;
-	if (clawState.hasLastHang && step > 0) clawState.holdVelocity.subVectors(hangPoint, clawState.lastHang).divideScalar(step);
-	clawState.lastHang.copy(hangPoint);
-	clawState.hasLastHang = true;
-	toy.group.position.copy(hangPoint);
-	toy.x = hangPoint.x;
-	toy.z = hangPoint.z;
-	const wobble = clawState.slip * 0.3;
-	const time = clock.elapsedTime;
-	toy.group.rotation.x = swingPivot.rotation.x - clawState.holdZ * 0.9 + wobble * Math.sin(time * 23);
-	toy.group.rotation.z = swingPivot.rotation.z + clawState.holdX * 0.9 + wobble * Math.cos(time * 19);
-}
+const dropMessages = {
+	lift: "집게 힘이 약해 인형이 빠져나갔어요!",
+	top: "꼭대기에서 덜컹! 충격에 인형이 떨어졌어요.",
+	deliver: "흔들리는 사이 인형이 미끄러졌어요!",
+	deposit: "흔들리는 사이 인형이 미끄러졌어요!",
+};
 
-function updateClaw(delta) {
-	const step = delta;
-	const tuning = CLAW_TUNING;
-	let ax = 0;
-	let az = 0;
-	let lengthRate = 0;
-	if (clawState.mode === "ready") {
-		if (!authGate.hidden || !prizeGate.hidden || !bagGate.hidden || !shopGate.hidden) return;
-		const direction = THREE.MathUtils.clamp((keys.has("ArrowRight") || keys.has("d") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("a") ? 1 : 0) + joystickVector.x, -1, 1);
-		const depthDirection = THREE.MathUtils.clamp((keys.has("ArrowDown") || keys.has("s") ? 1 : 0) - (keys.has("ArrowUp") || keys.has("w") ? 1 : 0) + joystickVector.z, -1, 1);
-		({ ax, az } = stepGantryVelocity(clawState, direction * tuning.control.speedX, depthDirection * tuning.control.speedZ, tuning.control.accel, step));
-		if (clawState.x < -3.55 || clawState.x > 3.55) {
-			clawState.x = THREE.MathUtils.clamp(clawState.x, -3.55, 3.55);
-			clawState.vx = 0;
+// The controller only reports what the simulation did; these turn it into game results and status messages.
+function handleClawEvent(event) {
+	const toy = event.id === undefined ? null : toyByPhysicsId.get(event.id);
+	switch (event.type) {
+		case "landed":
+			status.textContent = event.touching.length ? "인형에 닿았어요. 집게를 벌려 감쌉니다." : "집게가 바닥에 닿았어요. 위치를 다시 맞춰 보세요.";
+			break;
+		case "lift": {
+			const held = event.grabbed.map((id) => toyByPhysicsId.get(id)).filter(Boolean);
+			if (held.length === 0) status.textContent = "인형에 닿지 않았어요. 방향을 조금 조정해 보세요.";
+			else status.textContent = held.some((item) => item.weight > 0.82) ? "무거운 인형이에요! 집게가 버텨야 해요." : "집었어요! 집게가 천천히 들어 올립니다.";
+			break;
 		}
-		if (clawState.z < -1.12 || clawState.z > 1.05) {
-			clawState.z = THREE.MathUtils.clamp(clawState.z, -1.12, 1.05);
-			clawState.vz = 0;
-		}
-	} else if (clawState.mode === "drop") {
-		clawState.modeTime += step;
-		clawState.cable = Math.min(tuning.cableDepth, clawState.cable + step * tuning.dropSpeed);
-		lengthRate = tuning.dropSpeed;
-		if (clawState.cable >= tuning.cableDepth) {
-			lengthRate = 0;
-			const tip = clawTip();
-			let nearest = null;
-			let nearestDistance = Infinity;
-			for (const toy of toys) {
-				if (isAirborne(toy)) continue;
-				const distance = Math.hypot(toy.x - tip.x, toy.z - tip.z);
-				if (distance < nearestDistance) {
-					nearest = toy;
-					nearestDistance = distance;
-				}
+		case "noLift":
+			roundExplained = true;
+			status.textContent = event.grabbed.some((id) => toyByPhysicsId.get(id)?.weight > 0.82)
+				? "무거운 인형을 들어 올리지 못했어요. 가벼운 인형부터 도전해 보세요."
+				: "집게가 인형을 제대로 감싸지 못했어요.";
+			break;
+		case "dropped":
+			roundExplained = true;
+			status.textContent = event.phase === "lift" && event.risen < 0.8
+				? "인형이 무게를 못 이기고 집게에서 빠졌어요!"
+				: dropMessages[event.phase] ?? dropMessages.deliver;
+			break;
+		case "missed":
+			roundExplained = true;
+			status.textContent = event.rim
+				? "아쉬워요! 인형이 출구 테두리에 부딪혀 튕겨 나갔어요."
+				: "인형이 출구 안으로 들어가지 못했어요. 다시 도전해 보세요!";
+			break;
+		case "collected":
+			if (toy) {
+				toy.physics = null;
+				toyByPhysicsId.delete(event.id);
+				collectToy(toy, event.lucky);
 			}
-			clawState.target = nearestDistance < 0.76 ? nearest : null;
-			if (clawState.target) {
-				const target = clawState.target;
-				if (target.body) {
-					target.body = null;
-					target.group.scale.setScalar(target.baseScale);
-				}
-				clawState.contactX = target.x - tip.x;
-				clawState.contactZ = target.z - tip.z;
-			} else if (nearest && nearestDistance < 1.05) {
-				nudgeToy(nearest, tip.x, tip.z, 0.7);
+			break;
+		case "lost":
+			// A plush that tunnelled out of the pit is put back where it was stocked.
+			if (toy?.physics) {
+				const [x, z] = initialToyData[toy.index];
+				toy.physics.body.setTranslation({ x, y: FLOOR_Y + 1.2, z }, true);
+				toy.physics.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+				toy.physics.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
 			}
-			clawState.mode = "touch";
-			clawState.modeTime = 0;
-			status.textContent = clawState.target ? "인형에 닿았어요. 집게를 벌려 감쌉니다." : "집게가 바닥에 닿았어요. 위치를 다시 맞춰 보세요.";
-		}
-	} else if (clawState.mode === "touch") {
-		clawState.modeTime += step;
-		if (clawState.target) clawState.target.group.scale.y = clawState.target.baseScale * 0.96;
-		if (clawState.modeTime >= 0.3) {
-			clawState.mode = "close";
-			clawState.modeTime = 0;
-		}
-	} else if (clawState.mode === "close") {
-		clawState.modeTime += step;
-		if (clawState.target) {
-			const target = clawState.target;
-			const squeeze = THREE.MathUtils.clamp(clawState.modeTime / 0.42, 0, 1);
-			target.group.scale.y = target.baseScale * (1 - squeeze * 0.12);
-			// Closing fingers drag the plush toward the claw centre and tip it inward.
-			const tip = clawTip();
-			const pull = 1 - squeeze * 0.45;
-			target.x = tip.x + clawState.contactX * pull;
-			target.z = tip.z + clawState.contactZ * pull;
-			target.group.position.x = target.x;
-			target.group.position.z = target.z;
-			target.group.rotation.z = clawState.contactX * squeeze * 0.5;
-			target.group.rotation.x = -clawState.contactZ * squeeze * 0.5;
-		}
-		if (clawState.modeTime >= 0.42) {
-			if (clawState.target) beginLift();
-			else {
-				clawState.mode = "miss";
-				status.textContent = "인형에 닿지 않았어요. 방향을 조금 조정해 보세요.";
-			}
-			clawState.modeTime = 0;
-		}
-	} else if (clawState.mode === "lift" || clawState.mode === "miss") {
-		const loaded = Boolean(clawState.target);
-		const maxSpeed = loaded ? tuning.lift.baseSpeed - clawState.target.weight * tuning.lift.weightSlow : tuning.lift.baseSpeed;
-		const brakeDistance = clawState.cableSpeed ** 2 / (2 * tuning.lift.brake);
-		const accel = clawState.cable <= brakeDistance ? -tuning.lift.brake : tuning.lift.accel;
-		const previousSpeed = clawState.cableSpeed;
-		clawState.cableSpeed = THREE.MathUtils.clamp(clawState.cableSpeed + accel * step, 0.35, maxSpeed);
-		const verticalAccel = step > 0 ? (clawState.cableSpeed - previousSpeed) / step : 0;
-		clawState.cable = Math.max(0, clawState.cable - clawState.cableSpeed * step);
-		lengthRate = -clawState.cableSpeed;
-		if (updateGrip(verticalAccel, step)) {
-			releaseHeld(clawState.failMessage || (clawState.cable > 3.2
-				? "집게 힘이 약해 인형이 빠져나갔어요!"
-				: "인형이 무게를 못 이기고 집게에서 빠졌어요!"));
-		}
-		if (clawState.cable === 0) {
-			clawState.cableSpeed = 0;
-			if (clawState.target) clawState.shake = tuning.lift.topShake;
-			clawState.mode = clawState.grabbed ? "deliver" : "return";
-		}
-	} else if (clawState.mode === "deliver") {
-		let arrived;
-		({ ax, az, arrived } = stepGantryToward(clawState, CHUTE.x, CHUTE.z, tuning.deliver.maxSpeed, tuning.deliver.accel, step));
-		clawState.shake *= Math.exp(-7 * step);
-		if (updateGrip(0, step)) {
-			releaseHeld(clawState.failMessage || (clawState.shake > 0.15
-				? "꼭대기에서 덜컹! 충격에 인형이 떨어졌어요."
-				: "흔들리는 사이 인형이 미끄러졌어요!"));
-		}
-		if (arrived) {
-			clawState.mode = "deposit";
-			clawState.modeTime = 0;
-		}
-	} else if (clawState.mode === "deposit") {
-		clawState.modeTime += step;
-		if (clawState.target && clawState.modeTime >= 0.12) clawState.releasedToy = releaseHeld("");
-		const released = clawState.releasedToy;
-		const waiting = released && toys.includes(released) && clawState.modeTime < 3;
-		if (clawState.modeTime >= 0.5 && !waiting) {
-			clawState.releasedToy = null;
-			clawState.mode = "return";
-			clawState.modeTime = 0;
-		}
-	} else if (clawState.mode === "return") {
-		let arrived;
-		({ ax, az, arrived } = stepGantryToward(clawState, 0, 0, tuning.travel.maxSpeed, tuning.travel.accel, step));
-		clawState.cable = Math.max(0, clawState.cable - step * 6.3);
-		if (arrived && clawState.cable === 0) finishRound();
-	}
-
-	const damping = clawState.target && clawState.grabbed ? tuning.damping.loaded : tuning.damping.empty;
-	stepSwing(clawState.swing, { ax, az, length: pendulumLength(), lengthRate, damping }, step);
-
-	carriage.position.set(clawState.x, 5.7, clawState.z);
-	swingPivot.rotation.set(-clawState.swing.z, 0, clawState.swing.x);
-	claw.position.y = -clawState.cable;
-	claw.position.z = 0;
-	cable.position.y = -clawState.cable / 2;
-	cable.position.z = 0;
-	cable.scale.y = Math.max(0.01, clawState.cable);
-	let spread = 0.27;
-	if (clawState.mode === "drop") spread = THREE.MathUtils.lerp(0.27, 0.035, THREE.MathUtils.clamp(clawState.modeTime / 0.22, 0, 1));
-	else if (clawState.mode === "touch") spread = THREE.MathUtils.lerp(0.035, 0.27, THREE.MathUtils.clamp(clawState.modeTime / 0.3, 0, 1));
-	else if (clawState.mode === "close") spread = THREE.MathUtils.lerp(0.27, 0.035, THREE.MathUtils.clamp(clawState.modeTime / 0.42, 0, 1));
-	else if (clawState.mode === "deposit") spread = THREE.MathUtils.lerp(0.035, 0.27, THREE.MathUtils.clamp(clawState.modeTime / 0.25, 0, 1));
-	else if (clawState.mode === "return") spread = clawState.grabbed ? THREE.MathUtils.lerp(0.27, 0.035, THREE.MathUtils.clamp(clawState.modeTime / 0.3, 0, 1)) : 0.035;
-	else if (["lift", "deliver", "miss"].includes(clawState.mode)) spread = 0.035;
-	if (clawState.mode === "return") clawState.modeTime += step;
-	for (const finger of fingers) finger.position.set(0, 0, spread);
-	if (clawState.target && clawState.grabbed && ["lift", "deliver", "deposit"].includes(clawState.mode)) updateHeldToy(step);
-}
-
-function updateToyBodies(delta) {
-	for (const toy of [...toys]) {
-		const body = toy.body;
-		if (!body || toy === clawState.target) continue;
-		const others = [];
-		for (const other of toys) {
-			if (other === toy || other === clawState.target) continue;
-			if (other.body) {
-				const otherBody = other.body;
-				others.push({ x: otherBody.x, y: otherBody.y, z: otherBody.z, nudge: (dx, dz) => { otherBody.x += dx; otherBody.z += dz; } });
-			} else {
-				others.push({ x: other.x, y: FLOOR_Y, z: other.z, nudge: (dx, dz) => pushRestingToy(other, dx, dz) });
-			}
-		}
-		const result = stepBody(body, others, delta);
-		toy.x = body.x;
-		toy.z = body.z;
-		toy.group.position.set(body.x, body.y, body.z);
-		toy.group.rotation.set(body.tiltX, body.baseYaw + body.spin, body.tiltZ);
-		const bulge = toy.baseScale * (1 + body.squash * 0.45);
-		toy.group.scale.set(bulge, toy.baseScale * (1 - body.squash), bulge);
-		if (result === "collected") {
-			collectToy(toy, clawState.releasedToy !== toy);
-		} else if (result === "settled") {
-			toy.group.scale.setScalar(toy.baseScale);
-			toy.body = null;
-			if (clawState.releasedToy === toy) clawState.releasedToy = null;
-		}
+			break;
+		case "end":
+			finishRound(event.delivered);
+			break;
+		default:
+			break;
 	}
 }
 
-function updateChizzillaEscape(toy, delta, elapsed) {
-	if (toy.kind !== "chizzilla" || toy === clawState.target || toy.body) return false;
-	if (!(["ready", "drop", "touch", "close"].includes(clawState.mode))) return false;
-	const awayX = toy.x - clawState.x;
-	const awayZ = toy.z - clawState.z;
-	const distance = Math.hypot(awayX, awayZ);
-	if (distance > 2.1) return false;
+function clawInput() {
+	if (!authGate.hidden || !prizeGate.hidden || !bagGate.hidden || !shopGate.hidden) return { x: 0, z: 0 };
+	return {
+		x: THREE.MathUtils.clamp((keys.has("ArrowRight") || keys.has("d") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("a") ? 1 : 0) + joystickVector.x, -1, 1),
+		z: THREE.MathUtils.clamp((keys.has("ArrowDown") || keys.has("s") ? 1 : 0) - (keys.has("ArrowUp") || keys.has("w") ? 1 : 0) + joystickVector.z, -1, 1),
+	};
+}
 
-	let directionX = distance > 0.001 ? awayX / distance : Math.cos(elapsed + toy.index);
-	let directionZ = distance > 0.001 ? awayZ / distance : Math.sin(elapsed + toy.index);
-	if (toy.x < -2.6) directionX += 0.8;
-	if (toy.x > 2.6) directionX -= 0.8;
-	if (toy.z < -0.7) directionZ += 0.8;
-	if (toy.z > 0.7) directionZ -= 0.8;
-	const directionLength = Math.hypot(directionX, directionZ) || 1;
-	directionX /= directionLength;
-	directionZ /= directionLength;
-	const distanceStep = Math.min(delta * 2.2, Math.max(0, 2.1 - distance));
-	let nextX = THREE.MathUtils.clamp(toy.x + directionX * distanceStep, -3.4, 3.4);
-	let nextZ = THREE.MathUtils.clamp(toy.z + directionZ * distanceStep, -1.05, 1.05);
-	const overlapsToy = (x, z) => toys.some((other) => other !== toy && other !== clawState.target && Math.hypot(other.x - x, other.z - z) < 0.9);
-	if (overlapsToy(nextX, nextZ)) {
-		nextX = THREE.MathUtils.clamp(toy.x + directionX * distanceStep, -3.4, 3.4);
-		nextZ = toy.z;
-		if (overlapsToy(nextX, nextZ)) {
-			nextX = toy.x;
-			nextZ = THREE.MathUtils.clamp(toy.z + directionZ * distanceStep, -1.05, 1.05);
+// Chizzilla scampers away from the claw while it is being lined up, but cannot dodge once it is caught.
+function updateChizzillaEscape() {
+	const { mode, x: clawX, z: clawZ } = clawControl.state;
+	if (mode !== "ready" && mode !== "drop") return;
+	for (const toy of toys) {
+		if (toy.kind !== "chizzilla" || !toy.physics || toy.physics.clawContact) continue;
+		const body = toy.physics.body;
+		const center = body.worldCom();
+		if (center.y > FLOOR_Y + 0.9) continue;
+		const awayX = center.x - clawX;
+		const awayZ = center.z - clawZ;
+		const distance = Math.hypot(awayX, awayZ);
+		if (distance > 1.6) continue;
+		let directionX = distance > 0.001 ? awayX / distance : 1;
+		let directionZ = distance > 0.001 ? awayZ / distance : 0;
+		if (center.x < BOUNDS.minX + 0.8) directionX += 0.8;
+		if (center.x > BOUNDS.maxX - 0.8) directionX -= 0.8;
+		if (center.z < BOUNDS.minZ + 0.35) directionZ += 0.8;
+		if (center.z > BOUNDS.maxZ - 0.35) directionZ -= 0.8;
+		// Steer around the prize chute instead of running into it.
+		if (overlapsChute(center.x + directionX * 0.3, center.z + directionZ * 0.3, 0.4)) {
+			directionX += Math.sign(center.x - CHUTE.x) * 1.2;
+			directionZ += Math.sign(center.z - CHUTE.z) * 1.2;
 		}
+		const length = Math.hypot(directionX, directionZ) || 1;
+		const speed = 2.2 * Math.min(1, (1.6 - distance) / 0.3);
+		const velocity = body.linvel();
+		body.setLinvel({ x: directionX / length * speed, y: velocity.y, z: directionZ / length * speed }, true);
 	}
-	const movedX = nextX - toy.x;
-	const movedZ = nextZ - toy.z;
-	toy.x = nextX;
-	toy.z = nextZ;
-	toy.group.position.x = nextX;
-	toy.group.position.z = nextZ;
-	toy.group.position.y = 0.69 + Math.abs(Math.sin(elapsed * 20 + toy.index)) * 0.085;
-	if (Math.hypot(movedX, movedZ) > 0.001) toy.group.rotation.y = Math.atan2(movedX, movedZ);
-	toy.group.rotation.z = Math.sin(elapsed * 20 + toy.index) * 0.13;
-	return true;
+}
+
+const cableDirection = new THREE.Vector3();
+const cableDown = new THREE.Vector3(0, -1, 0);
+function syncPhysicsScene() {
+	for (const toy of toys) {
+		const body = toy.physics?.body;
+		if (!body || (body.isSleeping() && toy.synced)) continue;
+		const position = body.translation();
+		const rotation = body.rotation();
+		const center = body.worldCom();
+		toy.group.position.set(position.x, position.y, position.z);
+		toy.group.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+		toy.x = center.x;
+		toy.z = center.z;
+		toy.synced = true;
+	}
+	const state = clawControl.state;
+	carriage.position.set(state.x, CARRIAGE_Y, state.z);
+	bridge.position.x = state.x;
+	const head = clawSim.head.translation();
+	const tilt = clawSim.head.rotation();
+	claw.position.set(head.x, head.y, head.z);
+	claw.quaternion.set(tilt.x, tilt.y, tilt.z, tilt.w);
+	clawSim.fingerAngles().forEach((angle, index) => { fingers[index].rotation.x = angle; });
+	const pivot = clawSim.pivotPoint();
+	const tie = clawSim.anchorPoint();
+	cableDirection.set(tie.x - pivot.x, tie.y - pivot.y, tie.z - pivot.z);
+	const length = cableDirection.length();
+	cableRig.position.set(pivot.x, pivot.y, pivot.z);
+	if (length > 0.0001) cableRig.quaternion.setFromUnitVectors(cableDown, cableDirection.divideScalar(length));
+	cable.position.y = -length / 2;
+	cable.scale.y = Math.max(0.01, length);
+	updateCoilCord(length);
+	if (panelStick) {
+		const stickTilt = 0.32 / CLAW_TUNING.travel.maxSpeed;
+		panelStick.rotation.set(THREE.MathUtils.clamp(state.vz * stickTilt, -0.32, 0.32), 0, THREE.MathUtils.clamp(-state.vx * stickTilt, -0.32, 0.32));
+	}
+}
+
+function stepPhysics(delta) {
+	if (!clawControl) return;
+	// Fixed substeps keep the contacts stable; a slow frame slows the game down instead of exploding the simulation.
+	physicsLag = Math.min(physicsLag + delta, MAX_STEP * 6);
+	const input = clawInput();
+	while (physicsLag >= MAX_STEP) {
+		physicsLag -= MAX_STEP;
+		updateChizzillaEscape();
+		for (const event of clawControl.update(MAX_STEP, input)) handleClawEvent(event);
+	}
+	syncPhysicsScene();
 }
 
 function animate() {
-	const delta = Math.min(clock.getDelta(), 0.04);
+	const delta = Math.min(clock.getDelta(), 0.05);
 	updateRespawns();
-	updateClaw(delta);
-	updateToyBodies(delta);
-	const elapsed = clock.elapsedTime;
-	for (const toy of toys) {
-		if (toy !== clawState.target && !toy.body && !updateChizzillaEscape(toy, delta, elapsed)) {
-			toy.group.position.y = 0.69 + Math.sin(elapsed * 1.5 + toy.index) * 0.025;
-			toy.group.rotation.z = THREE.MathUtils.damp(toy.group.rotation.z, 0, 8, delta);
-		}
-	}
+	stepPhysics(delta);
 	renderer.render(scene, camera);
 	requestAnimationFrame(animate);
 }
@@ -2367,7 +2625,7 @@ bagItems.addEventListener("click", (event) => {
 });
 function closeBag() {
 	bagGate.hidden = true;
-	setBusy(clawState.mode !== "ready");
+	setBusy(!clawIsIdle());
 	document.querySelector("#openBag").focus();
 }
 document.querySelector("#closeBag").addEventListener("click", closeBag);
@@ -2381,7 +2639,7 @@ shopButton.addEventListener("click", async () => {
 });
 function closeShop() {
 	shopGate.hidden = true;
-	setBusy(clawState.mode !== "ready");
+	setBusy(!clawIsIdle());
 	shopButton.focus();
 }
 closeShopButton.addEventListener("click", closeShop);
@@ -2391,8 +2649,27 @@ document.querySelector("#closePrize").addEventListener("click", closePrize);
 sharePrizeButton.addEventListener("click", sharePrize);
 mapAnimalsButton.addEventListener("click", () => switchMap("animals"));
 mapPoliticsButton.addEventListener("click", enterPoliticsRoom);
+const modeFunButton = document.querySelector("#modeFun");
+const modeRealisticButton = document.querySelector("#modeRealistic");
+function updateModeButtons() {
+	modeFunButton.setAttribute("aria-pressed", String(clawDifficulty === "fun"));
+	modeRealisticButton.setAttribute("aria-pressed", String(clawDifficulty === "realistic"));
+}
+// The claw's power profile is fixed for a play, so a new mode applies from the next drop.
+function setClawDifficulty(mode) {
+	if (mode === clawDifficulty) return;
+	clawDifficulty = mode;
+	try { localStorage.setItem(clawModeStorageKey, mode); } catch { /* The mode stays selected for this page. */ }
+	updateModeButtons();
+	status.textContent = mode === "realistic"
+		? "현실 모드: 실제 기계처럼 들어 올린 뒤 집게 힘이 약해져요."
+		: "재미 모드: 집게가 끝까지 꽉 잡아요.";
+}
+modeFunButton.addEventListener("click", () => setClawDifficulty("fun"));
+modeRealisticButton.addEventListener("click", () => setClawDifficulty("realistic"));
+updateModeButtons();
 document.querySelector("#logout").addEventListener("click", () => {
-	if (clawState.mode !== "ready") {
+	if (!clawIsIdle()) {
 		status.textContent = "플레이가 끝난 뒤 로그아웃할 수 있어요.";
 		return;
 	}
@@ -2428,10 +2705,7 @@ window.addEventListener("keydown", (event) => {
 window.addEventListener("keyup", (event) => keys.delete(event.key.length === 1 ? event.key.toLowerCase() : event.key));
 window.addEventListener("blur", () => { keys.clear(); resetJoystick(); });
 canvas.addEventListener("pointermove", (event) => {
-	if (event.pointerId !== cameraDrag.pointerId) {
-		canvas.style.cursor = isAdInquiryTarget(event) ? "pointer" : "grab";
-		return;
-	}
+	if (event.pointerId !== cameraDrag.pointerId) return;
 	const deltaX = event.clientX - cameraDrag.x;
 	const deltaY = event.clientY - cameraDrag.y;
 	cameraDrag.x = event.clientX;
@@ -2445,33 +2719,14 @@ canvas.addEventListener("pointerdown", (event) => {
 	cameraDrag.pointerId = event.pointerId;
 	cameraDrag.x = event.clientX;
 	cameraDrag.y = event.clientY;
-	cameraDrag.startX = event.clientX;
-	cameraDrag.startY = event.clientY;
 	canvas.setPointerCapture(event.pointerId);
 	canvas.classList.add("dragging-view");
 });
-function isAdInquiryTarget(event) {
-	const bounds = canvas.getBoundingClientRect();
-	pointerNdc.set(
-		((event.clientX - bounds.left) / bounds.width) * 2 - 1,
-		-((event.clientY - bounds.top) / bounds.height) * 2 + 1,
-	);
-	interactionRaycaster.setFromCamera(pointerNdc, camera);
-	const firstOpaqueHit = interactionRaycaster.intersectObject(scene, true).find(({ object }) => {
-		const surfaces = Array.isArray(object.material) ? object.material : [object.material];
-		return !surfaces.every((surface) => surface?.transparent && surface.opacity < 0.95);
-	});
-	return firstOpaqueHit?.object.userData.adInquiryTarget === true;
-}
 function endCameraDrag(event) {
 	if (event.pointerId !== cameraDrag.pointerId) return;
-	const isClick = event.type === "pointerup" && Math.hypot(event.clientX - cameraDrag.startX, event.clientY - cameraDrag.startY) < 6;
-	const openAdInquiry = isClick && isAdInquiryTarget(event);
 	if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
 	cameraDrag.pointerId = null;
 	canvas.classList.remove("dragging-view");
-	canvas.style.cursor = openAdInquiry ? "pointer" : "grab";
-	if (openAdInquiry) window.open(adInquiryUrl, "_blank", "noopener,noreferrer");
 }
 canvas.addEventListener("pointerup", endCameraDrag);
 canvas.addEventListener("pointercancel", endCameraDrag);
@@ -2513,15 +2768,7 @@ resetButton?.addEventListener("click", () => {
 	resetToys();
 	score = currentAccount ? currentAccount.bag.length : 0;
 	scoreLabel.textContent = `${score} 마리`;
-		clawState.x = -3.35;
-		clawState.z = 0;
-	clawState.cable = 0;
-	clawState.target = null;
-	clawState.mode = "ready";
-	clawState.delivered = false;
-		clawState.modeTime = 0;
-		clawState.gripQuality = 0;
-		resetClawPhysics();
+	clawControl?.reset();
 		status.innerHTML = "<strong>← → ↑ ↓</strong> 앞뒤까지 맞추고<br><strong>스페이스</strong>로 인형을 뽑으세요";
 		updateRestockStatus();
 	setBusy(false);
