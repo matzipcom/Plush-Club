@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_AUTH_REDIRECT_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./supabase-config.js";
@@ -166,7 +167,8 @@ new GLTFLoader().loadAsync("./assets/base_basic_shaded.glb").then((gltf) => {
 	model.updateMatrixWorld(true);
 	const bounds = new THREE.Box3().setFromObject(model);
 	const dimensions = bounds.getSize(new THREE.Vector3());
-	model.scale.multiplyScalar(1.45 / Math.max(dimensions.y, 0.01));
+	// Chizztopia plushes match the animal plush size (~1.1).
+	model.scale.multiplyScalar(1.1 / Math.max(dimensions.y, 0.01));
 	model.updateMatrixWorld(true);
 	const normalizedBounds = new THREE.Box3().setFromObject(model);
 	model.position.y -= normalizedBounds.min.y;
@@ -201,7 +203,8 @@ function loadMoonkoritaModel() {
 		const model = gltf.scene;
 		model.updateMatrixWorld(true);
 		const dimensions = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());
-		model.scale.multiplyScalar(1.45 / Math.max(dimensions.x, dimensions.y, dimensions.z, 0.01));
+		// Chizztopia plushes match the animal plush size (~1.1).
+		model.scale.multiplyScalar(1.1 / Math.max(dimensions.x, dimensions.y, dimensions.z, 0.01));
 		model.updateMatrixWorld(true);
 		const bounds = new THREE.Box3().setFromObject(model);
 		const center = bounds.getCenter(new THREE.Vector3());
@@ -229,6 +232,59 @@ function loadMoonkoritaModel() {
 		status.textContent = "문코리타 3D 모델을 불러오지 못해 기본 인형으로 표시합니다.";
 	});
 	return moonkoritaLoadPromise;
+}
+
+const memeModels = {
+	pepe: { url: "./assets/pepe-optimized.glb", template: null, loadPromise: null, targetSize: 0.85 },
+	rageguy: { url: "./assets/rage-guy-optimized.glb", template: null, loadPromise: null, targetSize: 1.0 },
+	wojak: { url: "./assets/wojak-optimized.glb", template: null, loadPromise: null, targetSize: 1.0 },
+};
+
+function replaceMemeModel(group, kind) {
+	const entry = memeModels[kind];
+	if (!entry?.template) return;
+	group.clear();
+	group.add(entry.template.clone(true));
+}
+
+function loadMemeModel(kind) {
+	const entry = memeModels[kind];
+	if (entry.loadPromise) return entry.loadPromise;
+	const loader = new GLTFLoader();
+	loader.setMeshoptDecoder(MeshoptDecoder);
+	entry.loadPromise = loader.loadAsync(entry.url).then((gltf) => {
+		const model = gltf.scene;
+		model.updateMatrixWorld(true);
+		const dimensions = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());
+		// Meme plushes sit slightly smaller than the animal plush size (~1.1); per-kind targetSize tunes each one.
+		model.scale.multiplyScalar(entry.targetSize / Math.max(dimensions.x, dimensions.y, dimensions.z, 0.01));
+		model.updateMatrixWorld(true);
+		const bounds = new THREE.Box3().setFromObject(model);
+		const center = bounds.getCenter(new THREE.Vector3());
+		model.position.x -= center.x;
+		model.position.y -= bounds.min.y;
+		model.position.z -= center.z;
+		model.traverse((object) => {
+			if (object.isMesh) {
+				object.castShadow = true;
+				object.receiveShadow = true;
+			}
+		});
+		entry.template = model;
+		for (const toy of toys) {
+			if (toy.kind !== kind) continue;
+			replaceMemeModel(toy.group, kind);
+			rebuildToyPhysics(toy);
+		}
+		if (prizeModelKind === kind && prizeModel) {
+			replaceMemeModel(prizeModel, kind);
+			requestAnimationFrame(renderPrizePreview);
+		}
+	}).catch(() => {
+		entry.loadPromise = null;
+		status.textContent = "밈 3D 모델을 불러오지 못해 기본 인형으로 표시합니다.";
+	});
+	return entry.loadPromise;
 }
 let prizeShareDescription = "인형을 뽑았어요!";
 let prizeReturnFocus = null;
@@ -688,6 +744,14 @@ const mapDefinitions = {
 			[-0.54, -0.04, "chick", "#efcf79"], [0.5, -0.07, "bear", "#9bc4a7"],
 		],
 	},
+	meme: {
+		label: "밈",
+		toys: [
+			[-1.45, -1.0, "pepe", "#6fae57"], [1.45, -1.0, "rageguy", "#d9d2c6"],
+			[0.0, 0.95, "wojak", "#e8c9a8"], [-1.35, -0.05, "wojak", "#e8c9a8"],
+			[1.4, 0.75, "pepe", "#6fae57"], [0.05, -1.05, "rageguy", "#d9d2c6"],
+		],
+	},
 	politics: {
 		label: "찢토피아",
 		toys: [
@@ -697,6 +761,7 @@ const mapDefinitions = {
 	},
 };
 const mapAnimalsButton = document.querySelector("#mapAnimals");
+const mapMemeButton = document.querySelector("#mapMeme");
 const mapPoliticsButton = document.querySelector("#mapPolitics");
 function updatePoliticsMapButton() {
 	const purchased = currentAccount ? currentAccount.politicsRoomPurchased : guestPoliticsRoomPurchased;
@@ -882,9 +947,13 @@ function makeToy([x, z, kind, color], index, addToScene = true) {
 		replaceMoonkoritaModel(group);
 		void loadMoonkoritaModel();
 	}
+	if (memeModels[kind]) {
+		replaceMemeModel(group, kind);
+		void loadMemeModel(kind);
+	}
 	group.traverse((object) => { if (object.isMesh) { object.castShadow = true; object.receiveShadow = true; } });
 	if (addToScene) scene.add(group);
-	const weight = { chick: 0.3, duck: 0.38, bunny: 0.52, cat: 0.62, bear: 0.72, frog: 0.84, mayor: 0.68, legislator: 0.76, diplomat: 0.58, minister: 0.82, councilor: 0.66, candidate: 0.62, spokesperson: 0.7, chizzilla: 0.92, moonjaeger: 0.74, mulcorita: 0.74, moonkorita: 0.74 }[kind] + (index % 3) * 0.04;
+	const weight = { chick: 0.3, duck: 0.38, bunny: 0.52, cat: 0.62, bear: 0.72, frog: 0.84, mayor: 0.68, legislator: 0.76, diplomat: 0.58, minister: 0.82, councilor: 0.66, candidate: 0.62, spokesperson: 0.7, chizzilla: 0.92, moonjaeger: 0.74, mulcorita: 0.74, moonkorita: 0.74, pepe: 0.62, rageguy: 0.72, wojak: 0.66 }[kind] + (index % 3) * 0.04;
 	return { group, x, z, kind, color, index, weight, baseScale };
 }
 
@@ -922,17 +991,18 @@ function switchMap(mapId) {
 	respawnAt = loadRespawnTimes(activeMapId);
 	try { localStorage.setItem("plush-club-active-map-v1", activeMapId); } catch { /* The map remains selected for this session. */ }
 	mapAnimalsButton.setAttribute("aria-pressed", String(activeMapId === "animals"));
+	mapMemeButton.setAttribute("aria-pressed", String(activeMapId === "meme"));
 	mapPoliticsButton.setAttribute("aria-pressed", String(activeMapId === "politics"));
 	const stageLabel = document.querySelector(".stage-label");
 	stageLabel.textContent = mapDefinitions[activeMapId].label.toUpperCase();
-	const sceneColor = activeMapId === "politics" ? "#d6d0c4" : "#cfcac2";
+	const sceneColor = activeMapId === "politics" ? "#d6d0c4" : activeMapId === "meme" ? "#ccd3dc" : "#cfcac2";
 	scene.background.set(sceneColor);
 	scene.fog.color.set(sceneColor);
-	interiorLight.color.set(activeMapId === "politics" ? "#fff1dc" : "#f6f8ff");
+	interiorLight.color.set(activeMapId === "politics" ? "#fff1dc" : activeMapId === "meme" ? "#eef4ff" : "#f6f8ff");
 	resetToys();
 	clawControl?.reset();
 	updateRestockStatus();
-	status.textContent = activeMapId === "politics" ? "찢토피아로 이동했어요." : "동물 인형으로 이동했어요.";
+	status.textContent = activeMapId === "politics" ? "찢토피아로 이동했어요." : activeMapId === "meme" ? "밈으로 이동했어요." : "동물 인형으로 이동했어요.";
 	setBusy(false);
 	return true;
 }
@@ -952,6 +1022,7 @@ async function enterPoliticsRoom() {
 	if (!purchased && !window.confirm(translate(`찢토피아 이용권을 ${politicsRoomPrice.toLocaleString("ko-KR")}코인에 구매할까요? 구매 후에는 계속 무료로 입장할 수 있어요.`))) return;
 	politicsEntryPending = true;
 	mapAnimalsButton.disabled = true;
+	mapMemeButton.disabled = true;
 	mapPoliticsButton.disabled = true;
 	setBusy(true);
 	let purchasedNow = false;
@@ -999,6 +1070,7 @@ async function enterPoliticsRoom() {
 	} finally {
 		politicsEntryPending = false;
 		mapAnimalsButton.disabled = false;
+		mapMemeButton.disabled = false;
 		mapPoliticsButton.disabled = false;
 		setBusy(!clawIsIdle());
 	}
@@ -1364,7 +1436,7 @@ async function hashPassword(password, saltHex) {
 }
 
 function getToyName(kind) {
-	return { bear: "곰돌이", chick: "병아리", duck: "오리", frog: "개구리", bunny: "토끼", cat: "고양이", mayor: "시장 후보", legislator: "의원", diplomat: "외교관", minister: "장관", councilor: "시의원", candidate: "후보자", spokesperson: "대변인", chizzilla: "찢칠라", moonjaeger: "문크예거", mulcorita: "대리석 문코리타", moonkorita: "문코리타" }[kind] || "말랑 인형";
+	return { bear: "곰돌이", chick: "병아리", duck: "오리", frog: "개구리", bunny: "토끼", cat: "고양이", mayor: "시장 후보", legislator: "의원", diplomat: "외교관", minister: "장관", councilor: "시의원", candidate: "후보자", spokesperson: "대변인", chizzilla: "찢칠라", moonjaeger: "문크예거", mulcorita: "대리석 문코리타", moonkorita: "문코리타", pepe: "페페", rageguy: "레이지 가이", wojak: "워작" }[kind] || "말랑 인형";
 }
 
 function getColorName(color) {
@@ -1403,9 +1475,9 @@ function showPrize(toy, source = "pull") {
 	if (prizeModel) prizeScene.remove(prizeModel);
 	prizeModelKind = toy.kind;
 	prizeModel = toy.group.clone(true);
-	prizeModel.position.set(0, toy.kind === "chizzilla" ? 0.46 : 0, 0);
+	prizeModel.position.set(0, 0, 0);
 	prizeModel.rotation.set(0, -0.16, 0);
-	prizeModel.scale.setScalar(toy.kind === "chizzilla" ? 1.35 : 1.18);
+	prizeModel.scale.setScalar(1.18);
 	prizeScene.add(prizeModel);
 	const toyName = getToyName(toy.kind);
 	const colorName = getColorName(toy.color);
@@ -1637,9 +1709,11 @@ function renderShopSellItems() {
 		controls.className = "shop-sell-controls";
 		
 		const rareToys = ["chizzilla", "mulcorita", "moonkorita"];
+		const memeToys = ["pepe", "rageguy", "wojak"];
 		const isRareToy = rareToys.includes(item.kind);
-		const quickSellPrice = isRareToy ? 1000 : 15;
-		const tradePrice = isRareToy ? 1000 : 15;
+		const isMemeToy = memeToys.includes(item.kind);
+		const quickSellPrice = isRareToy ? 1000 : isMemeToy ? 500 : 15;
+		const tradePrice = isRareToy ? 1000 : isMemeToy ? 500 : 15;
 		
 		const quickSellButton = document.createElement("button");
 		quickSellButton.className = "shop-sell-button";
@@ -2578,6 +2652,7 @@ devAddCoinsButton.addEventListener("click", () => {
 document.querySelector("#closePrize").addEventListener("click", closePrize);
 sharePrizeButton.addEventListener("click", sharePrize);
 mapAnimalsButton.addEventListener("click", () => switchMap("animals"));
+mapMemeButton.addEventListener("click", () => switchMap("meme"));
 mapPoliticsButton.addEventListener("click", enterPoliticsRoom);
 document.querySelector("#logout").addEventListener("click", () => {
 	if (!clawIsIdle()) {
@@ -2721,6 +2796,7 @@ void restoreSession();
 buildMachine();
 resetToys();
 mapAnimalsButton.setAttribute("aria-pressed", String(activeMapId === "animals"));
+mapMemeButton.setAttribute("aria-pressed", String(activeMapId === "meme"));
 mapPoliticsButton.setAttribute("aria-pressed", String(activeMapId === "politics"));
 document.querySelector(".stage-label").textContent = mapDefinitions[activeMapId].label.toUpperCase();
 updateRestockStatus();

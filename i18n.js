@@ -16,6 +16,7 @@ const phrases = [
 	["게스트 플레이", "Guest", "ゲストプレイ", "游客模式"],
 	["로그인", "Log in", "ログイン", "登录"],
 	["동물 인형", "Animal plushies", "動物のぬいぐるみ", "动物玩偶"],
+	["밈", "American Meme", "アメリカンミーム", "美式迷因"],
 	["찢토피아", "Chizztopia", "チッチトピア", "Chizztopia"],
 	["찢토피아 구매 · 1,000코인", "Unlock Chizztopia · 1,000 coins", "チッチトピアを購入 · 1,000コイン", "购买Chizztopia · 1,000金币"],
 	["찢토피아 · 구매 완료", "Chizztopia · Unlocked", "チッチトピア · 購入済み", "Chizztopia · 已解锁"],
@@ -79,6 +80,7 @@ const phrases = [
 	["닫기", "Close", "閉じる", "关闭"],
 	["찢칠라 3D 모델을 불러오지 못해 기본 인형으로 표시합니다.", "Couldn't load the Chizzilla 3D model. Showing a basic plush instead.", "チッチラの3Dモデルを読み込めなかったため、基本のぬいぐるみで表示します。", "无法加载찢칠라的3D模型，现以基本玩偶显示。"],
 	["문코리타 3D 모델을 불러오지 못해 기본 인형으로 표시합니다.", "Couldn't load the Moonkorita 3D model. Showing a standard plushie instead.", "ムンコリタの3Dモデルを読み込めなかったため、通常のぬいぐるみで表示します。", "无法加载文科丽塔的3D模型，现以普通玩偶显示。"],
+	["밈 3D 모델을 불러오지 못해 기본 인형으로 표시합니다.", "Couldn't load the meme 3D model. Showing a standard plushie instead.", "ミームの3Dモデルを読み込めなかったため、通常のぬいぐるみで表示します。", "无法加载迷因3D模型，现以普通玩偶显示。"],
 	["찢칠라 이미지를 불러오지 못했어요. 페이지를 새로고침해 주세요.", "Couldn't load the Chizzilla image. Please refresh the page.", "チッチラの画像を読み込めませんでした。ページを再読み込みしてください。", "无法加载찢칠라图片，请刷新页面。"],
 	["보충 기록을 불러오지 못했어요. 현재 브라우저에서 새로 시작합니다.", "Couldn't load restock data. Starting fresh in this browser.", "補充データを読み込めませんでした。このブラウザーで新しく開始します。", "无法加载补货记录，将在此浏览器中重新开始。"],
 	["집게가 돌아온 뒤 맵을 바꿀 수 있어요.", "You can change maps after the claw returns.", "クレーンが戻ってからマップを変更できます。", "夹爪返回后即可切换地图。"],
@@ -191,6 +193,7 @@ const phrases = [
 	["외교관", "Diplomat", "外交官", "外交官"], ["장관", "Minister", "大臣", "部长"], ["시의원", "City councilor", "市議会議員", "市议员"],
 	["후보자", "Candidate", "候補者", "候选人"], ["대변인", "Spokesperson", "報道官", "发言人"],
 	["대리석 문코리타", "Marble Moonkorita", "大理石ムンコリタ", "大理石文科丽塔"], ["문코리타", "Moonkorita", "ムンコリタ", "文科丽塔"],
+	["페페", "Pepe", "ペペ", "佩佩"], ["레이지 가이", "Rage Guy", "レイジガイ", "暴怒哥"], ["워작", "Wojak", "ウォジャック", "Wojak"],
 	["빨강", "Red", "赤", "红色"], ["주황", "Orange", "オレンジ", "橙色"], ["노랑", "Yellow", "黄色", "黄色"],
 	["초록", "Green", "緑", "绿色"], ["파랑", "Blue", "青", "蓝色"], ["남색", "Navy", "紺", "藏青色"], ["보라", "Purple", "紫", "紫色"],
 	["레인보우", "Rainbow", "レインボー", "彩虹"], ["기본", "Basic", "基本", "基础"],
@@ -239,7 +242,7 @@ function formatDynamic(source, targetLanguage) {
 	if (match) return targetLanguage === "en" ? `${match[1]} plushies` : targetLanguage === "ja" ? `${match[1]}体` : `${match[1]}只`;
 	match = source.match(/^(.+)님의 친구 (\d+)마리$/);
 	if (match) return targetLanguage === "en" ? `${match[2]} plushies collected by ${match[1]}` : targetLanguage === "ja" ? `${match[1]}さんが集めたぬいぐるみ ${match[2]}体` : `${match[1]}收集的玩偶：${match[2]}只`;
-	match = source.match(/^([\w가-힣 ]+) ([\w가-힣 ]+)인형(?: · PLUSH CLUB 컬렉션)?$/);
+	match = source.match(/^([\w가-힣 ]+?) ([\w가-힣 ]+)인형(?: · PLUSH CLUB 컬렉션)?$/);
 	if (match) {
 		const color = translations.get(match[1])?.[targetLanguage] || match[1];
 		const toy = translations.get(match[2])?.[targetLanguage] || match[2];
@@ -256,19 +259,25 @@ function formatDynamic(source, targetLanguage) {
 	if (match) return targetLanguage === "en" ? `Animals · ${match[1]} ready` : targetLanguage === "ja" ? `動物 · ${match[1]}体準備完了` : `动物 · ${match[1]}只已准备好`;
 	match = source.match(/^찢토피아 · (\d+)마리 준비 완료$/);
 	if (match) return targetLanguage === "en" ? `Chizztopia · ${match[1]} ready` : targetLanguage === "ja" ? `チッチトピア · ${match[1]}体準備完了` : `Chizztopia · ${match[1]}只已准备好`;
+	match = source.match(/^밈 · (\d+)마리 준비 완료$/);
+	if (match) return targetLanguage === "en" ? `American Meme · ${match[1]} ready` : targetLanguage === "ja" ? `アメリカンミーム · ${match[1]}体準備完了` : `美式迷因 · ${match[1]}只已准备好`;
 	match = source.match(/^보충 (\d+)마리 · (\d+):(\d+)$/);
 	if (match) return targetLanguage === "en" ? `Restocking ${match[1]} · ${match[2]}:${match[3]}` : targetLanguage === "ja" ? `${match[1]}体補充中 · ${match[2]}:${match[3]}` : `正在补货 ${match[1]}只 · ${match[2]}:${match[3]}`;
-	match = source.match(/^(동물 인형|찢토피아) · 보충 (\d+)마리 · (\d+):(\d+)$/);
+	match = source.match(/^(동물 인형|찢토피아|밈) · 보충 (\d+)마리 · (\d+):(\d+)$/);
 	if (match) {
 		const mapName = match[1] === "동물 인형"
 			? (targetLanguage === "en" ? "Animals" : targetLanguage === "ja" ? "動物" : "动物")
+			: match[1] === "밈"
+			? (targetLanguage === "en" ? "American Meme" : targetLanguage === "ja" ? "アメリカンミーム" : "美式迷因")
 			: (targetLanguage === "en" ? "Chizztopia" : targetLanguage === "ja" ? "チッチトピア" : "Chizztopia");
 		return targetLanguage === "en" ? `${mapName} · restocking ${match[2]} · ${match[3]}:${match[4]}` : targetLanguage === "ja" ? `${mapName} · ${match[2]}体補充中 · ${match[3]}:${match[4]}` : `${mapName} · 正在补货${match[2]}只 · ${match[3]}:${match[4]}`;
 	}
-	match = source.match(/^(동물 인형으로|찢토피아로) 이동했어요\.$/);
+	match = source.match(/^(동물 인형으로|찢토피아로|밈으로) 이동했어요\.$/);
 	if (match) {
 		const mapName = match[1] === "동물 인형으로"
 			? (targetLanguage === "en" ? "the animal map" : targetLanguage === "ja" ? "動物マップ" : "动物地图")
+			: match[1] === "밈으로"
+			? (targetLanguage === "en" ? "American Meme" : targetLanguage === "ja" ? "アメリカンミーム" : "美式迷因")
 			: (targetLanguage === "en" ? "Chizztopia" : targetLanguage === "ja" ? "チッチトピア" : "Chizztopia");
 		return targetLanguage === "en" ? `Moved to ${mapName}.` : targetLanguage === "ja" ? `${mapName}に移動しました。` : `已切换到${mapName}。`;
 	}
