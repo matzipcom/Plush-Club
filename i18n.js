@@ -31,7 +31,17 @@ const phrases = [
 	["화면 드래그", "Drag the view", "画面をドラッグ", "拖动视图"],
 	["로 기계를 돌리고", " to rotate the machine, then", "してマシンを回し、", "旋转机器，然后"],
 	["조이스틱", "the joystick", "ジョイスティック", "摇杆"],
+	["조이스틱·키패드", "the joystick or keypad", "ジョイスティック・キーパッド", "摇杆或方向键盘"],
 	["으로 집게를 움직이세요", " to move the claw", "でクレーンを動かします", "移动夹爪"],
+	["로 집게를 움직이세요", " to move the claw", "でクレーンを動かします", "移动夹爪"],
+	["조작 방식", "Control style", "操作方法", "操作方式"],
+	["조이스틱 조작", "Joystick", "ジョイスティック", "摇杆"],
+	["키패드 조작", "Keypad", "キーパッド", "方向键盘"],
+	["집게 키패드. 방향 버튼을 누르는 동안 집게가 움직여요.", "Claw keypad. Hold a direction button to move the claw.", "クレーン用キーパッド。方向ボタンを押している間クレーンが動きます。", "夹爪方向键盘。按住方向按钮即可移动夹爪。"],
+	["안쪽으로 이동", "Move back", "奥へ移動", "向里移动"],
+	["앞쪽으로 이동", "Move forward", "手前へ移動", "向外移动"],
+	["왼쪽으로 이동", "Move left", "左へ移動", "向左移动"],
+	["오른쪽으로 이동", "Move right", "右へ移動", "向右移动"],
 	["게임 조작", "Game controls", "ゲーム操作", "游戏操作"],
 	["집게 조이스틱. 드래그하여 방향과 거리를 조절하세요.", "Claw joystick. Drag to control direction and distance.", "クレーン用ジョイスティック。ドラッグして方向と距離を調整します。", "夹爪摇杆。拖动以控制方向和距离。"],
 	["인형 뽑기", "Grab a plushie", "ぬいぐるみを取る", "抓取玩偶"],
@@ -67,8 +77,7 @@ const phrases = [
 	["방금 뽑은 인형 3D 미리보기. 손가락이나 마우스로 끌어 회전", "3D preview of your new plushie. Drag to rotate.", "獲得したぬいぐるみの3Dプレビュー。ドラッグして回転できます。", "新玩偶的3D预览。拖动即可旋转。"],
 	["공유하기", "Share", "共有", "分享"],
 	["닫기", "Close", "閉じる", "关闭"],
-	["찢칠라 3D 모델을 불러오지 못해 이미지 모델로 표시합니다.", "Couldn't load the Chizzilla 3D model. Showing an image instead.", "チッチラの3Dモデルを読み込めなかったため、画像で表示します。", "无法加载찢칠라的3D模型，现以图片显示。"],
-	["대리석 문코리타 3D 모델을 불러오지 못해 기본 인형으로 표시합니다.", "Couldn't load the marble Moonkorita 3D model. Showing a standard plushie instead.", "大理石ムンコリタの3Dモデルを読み込めなかったため、通常のぬいぐるみで表示します。", "无法加载大理石文科丽塔的3D模型，现以普通玩偶显示。"],
+	["찢칠라 3D 모델을 불러오지 못해 기본 인형으로 표시합니다.", "Couldn't load the Chizzilla 3D model. Showing a basic plush instead.", "チッチラの3Dモデルを読み込めなかったため、基本のぬいぐるみで表示します。", "无法加载찢칠라的3D模型，现以基本玩偶显示。"],
 	["문코리타 3D 모델을 불러오지 못해 기본 인형으로 표시합니다.", "Couldn't load the Moonkorita 3D model. Showing a standard plushie instead.", "ムンコリタの3Dモデルを読み込めなかったため、通常のぬいぐるみで表示します。", "无法加载文科丽塔的3D模型，现以普通玩偶显示。"],
 	["찢칠라 이미지를 불러오지 못했어요. 페이지를 새로고침해 주세요.", "Couldn't load the Chizzilla image. Please refresh the page.", "チッチラの画像を読み込めませんでした。ページを再読み込みしてください。", "无法加载찢칠라图片，请刷新页面。"],
 	["보충 기록을 불러오지 못했어요. 현재 브라우저에서 새로 시작합니다.", "Couldn't load restock data. Starting fresh in this browser.", "補充データを読み込めませんでした。このブラウザーで新しく開始します。", "无法加载补货记录，将在此浏览器中重新开始。"],
@@ -197,6 +206,22 @@ const phrases = [
 	["개인정보처리방침", "Privacy policy", "プライバシーポリシー", "隐私政策"],
 	["서비스 문의 (Instagram 새 탭)", "Contact (Instagram opens in a new tab)", "お問い合わせ（Instagram、新しいタブ）", "联系服务（Instagram将在新标签页打开）"],
 	["사이트 안내", "Site information", "サイト案内", "网站信息"],
+	["🎁 일일 보너스 (200코인)", "🎁 Daily bonus (200 coins)", "🎁 デイリーボーナス（200コイン）", "🎁 每日奖励（200金币）"],
+	["하루에 한 번 200코인 받기", "Claim 200 coins once a day", "1日に1回200コインを受け取る", "每天领取一次200金币"],
+	["다음 일일 보너스까지 남은 시간", "Time until the next daily bonus", "次のデイリーボーナスまでの時間", "距离下次每日奖励的时间"],
+	["일일 보너스를 받기 위해선 로그인을 하셔야 합니다.", "Log in to claim the daily bonus.", "デイリーボーナスを受け取るにはログインが必要です。", "领取每日奖励需要先登录。"],
+	["아직 일일 보너스를 받을 수 없어요. 남은 시간을 확인해 주세요.", "You can't claim the daily bonus yet. Check the remaining time.", "まだデイリーボーナスを受け取れません。残り時間を確認してください。", "暂时无法领取每日奖励，请查看剩余时间。"],
+	["일일 보너스를 받지 못했어요. 최신 Supabase schema.sql을 실행했는지 확인해 주세요.", "Couldn't claim the daily bonus. Check that the latest Supabase schema.sql has been run.", "デイリーボーナスを受け取れませんでした。最新のSupabase schema.sqlが実行されているか確認してください。", "无法领取每日奖励，请确认已运行最新版Supabase schema.sql。"],
+	["일일 보너스 대기 시간을 저장하지 못했어요.", "Couldn't save the daily bonus cooldown.", "デイリーボーナスの待機時間を保存できませんでした。", "无法保存每日奖励的等待时间。"],
+	["개발자 탭", "Developer tab", "開発者タブ", "开发者标签页"],
+	["개발자 탭 닫기", "Close developer tab", "開発者タブを閉じる", "关闭开发者标签页"],
+	["개발자 코드", "Developer code", "開発者コード", "开发者代码"],
+	["코드 입력", "Enter code", "コードを入力", "输入代码"],
+	["코드를 입력하세요.", "Enter the code.", "コードを入力してください。", "请输入代码。"],
+	["확인", "Confirm", "確認", "确认"],
+	["+1000 코인", "+1000 coins", "+1000コイン", "+1000金币"],
+	["코드가 올바르지 않아요.", "That code isn't correct.", "コードが正しくありません。", "代码不正确。"],
+	["개발자 환경이 켜졌어요.", "Developer mode is on.", "開発者モードがオンになりました。", "开发者模式已开启。"],
 ];
 
 const translations = new Map(phrases.map(([source, en, ja, zh]) => [source, { en, ja, zh }]));
@@ -265,6 +290,12 @@ function formatDynamic(source, targetLanguage) {
 	if (match) return targetLanguage === "en" ? `Chizztopia unlocked for ${match[1]} coins. Entering now.` : targetLanguage === "ja" ? `${match[1]}コインでチッチトピアを購入しました。入室します。` : `已花费${match[1]}金币解锁Chizztopia，正在进入。`;
 	match = source.match(/^([\d,]+)코인을 받았어요\. 다음 코인은 5분 후에 받을 수 있어요\.$/);
 	if (match) return targetLanguage === "en" ? `You got ${match[1]} coins. Claim more in 5 minutes.` : targetLanguage === "ja" ? `${match[1]}コインを受け取りました。次回は5分後に受け取れます。` : `已领取${match[1]}金币，5分钟后可再次领取。`;
+	match = source.match(/^🎁 (\d{2}):(\d{2})$/);
+	if (match) return source;
+	match = source.match(/^(\d+(?:,\d{3})*)코인 일일 보너스를 받았어요! 내일(?: 이 시간에)? 다시 받을 수 있어요\.$/);
+	if (match) return targetLanguage === "en" ? `You got a ${match[1]}-coin daily bonus! Come back tomorrow.` : targetLanguage === "ja" ? `${match[1]}コインのデイリーボーナスを受け取りました！明日また受け取れます。` : `已领取${match[1]}金币每日奖励！明天可再次领取。`;
+	match = source.match(/^(\d+(?:,\d{3})*)코인을 받았어요\. \(보유 (\d+(?:,\d{3})*)코인\)$/);
+	if (match) return targetLanguage === "en" ? `You got ${match[1]} coins. (Balance: ${match[2]})` : targetLanguage === "ja" ? `${match[1]}コインを受け取りました。（所持${match[2]}コイン）` : `已领取${match[1]}金币。（余额${match[2]}金币）`;
 	match = source.match(/^레인보우 (.+)$/);
 	if (match) return targetLanguage === "en" ? `Rainbow ${match[1]}` : targetLanguage === "ja" ? `レインボー ${match[1]}` : `彩虹 ${match[1]}`;
 	match = source.match(/^(\d+) /);

@@ -26,6 +26,9 @@ const defaultStatusMarkup = status.innerHTML;
 const dropButton = document.querySelector("#drop");
 const joystick = document.querySelector("#joystick");
 const joystickKnob = document.querySelector("#joystickKnob");
+const keypad = document.querySelector("#keypad");
+const controlJoystickButton = document.querySelector("#controlJoystick");
+const controlKeypadButton = document.querySelector("#controlKeypad");
 const resetButton = document.querySelector("#reset");
 const zoomInButton = document.querySelector("#zoomIn");
 const zoomOutButton = document.querySelector("#zoomOut");
@@ -41,9 +44,11 @@ const shopButton = document.querySelector("#openShop");
 const coinsLabel = document.querySelector("#coins");
 const accountClaimButton = document.querySelector("#addCoins");
 const guestClaimButton = document.querySelector("#addGuestCoins");
+const quickCoinButton = document.querySelector("#quickCoin");
 const dailyBonusButton = document.querySelector("#dailyBonus");
 const bagCountLabel = document.querySelector("#bagCount");
 const bagGate = document.querySelector("#bagGate");
+const devGate = document.querySelector("#devGate");
 const bagItems = document.querySelector("#bagItems");
 const shopGate = document.querySelector("#shopGate");
 const shopStatus = document.querySelector("#shopStatus");
@@ -156,7 +161,7 @@ function replaceChizzillaWithPbr(group) {
 	});
 }
 
-new GLTFLoader().loadAsync("./assets/base_basic_pbr.glb").then((gltf) => {
+new GLTFLoader().loadAsync("./assets/base_basic_shaded.glb").then((gltf) => {
 	const model = gltf.scene.clone(true);
 	model.updateMatrixWorld(true);
 	const bounds = new THREE.Box3().setFromObject(model);
@@ -179,46 +184,7 @@ new GLTFLoader().loadAsync("./assets/base_basic_pbr.glb").then((gltf) => {
 	}
 	if (prizeModelKind === "chizzilla" && prizeModel) replaceChizzillaWithPbr(prizeModel);
 }).catch(() => {
-	status.textContent = "찢칠라 3D 모델을 불러오지 못해 이미지 모델로 표시합니다.";
-});
-let mulcoritaTemplate = null;
-
-function replaceMulcoritaModel(group) {
-	if (!mulcoritaTemplate) return;
-	group.clear();
-	group.add(mulcoritaTemplate.clone(true));
-}
-
-new GLTFLoader().loadAsync("./assets/base.glb").then((gltf) => {
-	const model = gltf.scene;
-	model.updateMatrixWorld(true);
-	const bounds = new THREE.Box3().setFromObject(model);
-	const dimensions = bounds.getSize(new THREE.Vector3());
-	model.scale.multiplyScalar(1.45 / Math.max(dimensions.y, dimensions.x, dimensions.z, 0.01));
-	model.updateMatrixWorld(true);
-	const normalizedBounds = new THREE.Box3().setFromObject(model);
-	const center = normalizedBounds.getCenter(new THREE.Vector3());
-	model.position.x -= center.x;
-	model.position.y -= normalizedBounds.min.y;
-	model.position.z -= center.z;
-	model.traverse((object) => {
-		if (object.isMesh) {
-			object.castShadow = true;
-			object.receiveShadow = true;
-		}
-	});
-	mulcoritaTemplate = model;
-	for (const toy of toys) {
-		if (toy.kind !== "mulcorita") continue;
-		replaceMulcoritaModel(toy.group);
-		rebuildToyPhysics(toy);
-	}
-	if (prizeModelKind === "mulcorita" && prizeModel) {
-		replaceMulcoritaModel(prizeModel);
-		requestAnimationFrame(renderPrizePreview);
-	}
-}).catch(() => {
-	status.textContent = "대리석 문코리타 3D 모델을 불러오지 못해 기본 인형으로 표시합니다.";
+	status.textContent = "찢칠라 3D 모델을 불러오지 못해 기본 인형으로 표시합니다.";
 });
 let moonkoritaTemplate = null;
 let moonkoritaLoadPromise = null;
@@ -380,14 +346,6 @@ rainbowContext.fillRect(0, 0, rainbowCanvas.width, rainbowCanvas.height);
 const rainbowTexture = new THREE.CanvasTexture(rainbowCanvas);
 rainbowTexture.colorSpace = THREE.SRGBColorSpace;
 const plush = (color) => color === "rainbow" ? plushFabric("#ffffff", { map: rainbowTexture }) : plushFabric(color);
-const chizzillaImageTexture = new THREE.TextureLoader().load(
-	"./assets/chizzilla.jpg",
-	(texture) => { texture.colorSpace = THREE.SRGBColorSpace; },
-	undefined,
-	() => { status.textContent = "찢칠라 이미지를 불러오지 못했어요. 페이지를 새로고침해 주세요."; },
-);
-chizzillaImageTexture.colorSpace = THREE.SRGBColorSpace;
-const chizzillaImageMaterial = new THREE.MeshBasicMaterial({ map: chizzillaImageTexture, side: THREE.DoubleSide });
 const eyeMaterial = safetyEyeMaterial();
 const threadMaterial = embroideryThread("#3b2925");
 const bellyMaterial = plushFabric("#f6ead8");
@@ -733,8 +691,8 @@ const mapDefinitions = {
 	politics: {
 		label: "찢토피아",
 		toys: [
-			[-1.4, -0.95, "chizzilla", "#aaa19a"], [0.05, -1.0, "mulcorita", "#8fba9c"], [1.45, -1.0, "moonkorita", "#8fba9c"],
-			[-1.35, -0.1, "chizzilla", "#aaa19a"], [0.15, 0.4, "mulcorita", "#8fba9c"], [1.4, 0.75, "moonkorita", "#8fba9c"],
+			[-1.4, -0.95, "chizzilla", "#aaa19a"], [1.45, -1.0, "moonkorita", "#8fba9c"],
+			[-1.35, -0.1, "chizzilla", "#aaa19a"], [1.4, 0.75, "moonkorita", "#8fba9c"],
 		],
 	},
 };
@@ -860,21 +818,9 @@ function makeToy([x, z, kind, color], index, addToScene = true) {
 			new THREE.Vector3(0.25, 0.13, -0.18), new THREE.Vector3(0.45, 0.05, -0.3), new THREE.Vector3(0.63, 0.1, -0.25),
 		);
 		group.add(new THREE.Mesh(new THREE.TubeGeometry(tailCurve, 12, 0.022, 7, false), plush("#8e8178")));
-		const imageGeometry = new THREE.PlaneGeometry(1.08, 0.81, 28, 22);
-		const imagePosition = imageGeometry.attributes.position;
-		for (let vertex = 0; vertex < imagePosition.count; vertex += 1) {
-			const imageX = imagePosition.getX(vertex) / 0.54;
-			const imageY = imagePosition.getY(vertex) / 0.405;
-			imagePosition.setZ(vertex, 0.075 * Math.max(0, 1 - imageX * imageX) * Math.max(0, 1 - imageY * imageY));
-		}
-		imageGeometry.computeVertexNormals();
-		const image = new THREE.Mesh(imageGeometry, chizzillaImageMaterial);
-		image.position.set(0, 0.47, 0.29);
-		image.renderOrder = 2;
-		group.add(image);
 		group.scale.setScalar(1.04);
 		if (chizzillaPbrTemplate) replaceChizzillaWithPbr(group);
-		group.traverse((object) => { if (object.isMesh) { object.castShadow = object !== image; object.receiveShadow = true; } });
+		group.traverse((object) => { if (object.isMesh) { object.castShadow = true; object.receiveShadow = true; } });
 		if (addToScene) scene.add(group);
 		return { group, x, z, kind, color, index, weight: 0.92, baseScale: 1.04 };
 	}
@@ -932,7 +878,6 @@ function makeToy([x, z, kind, color], index, addToScene = true) {
 	}
 	const baseScale = 0.9 + (index % 4) * 0.045;
 	group.scale.setScalar(baseScale);
-	if (kind === "mulcorita") replaceMulcoritaModel(group);
 	if (kind === "moonkorita") {
 		replaceMoonkoritaModel(group);
 		void loadMoonkoritaModel();
@@ -1256,6 +1201,9 @@ const keys = new Set();
 const clock = new THREE.Clock();
 const joystickVector = { x: 0, z: 0 };
 let joystickPointerId = null;
+const keypadVector = { x: 0, z: 0 };
+const keypadPresses = new Map();
+const controlModeStorageKey = "plush-club-control-mode-v1";
 let score = 0;
 let coinAlertTimer = 0;
 
@@ -1866,6 +1814,11 @@ function updateCoinClaimButtons() {
 	};
 	updateButton(accountClaimButton, currentAccount?.nextCoinClaimAt || 0);
 	updateButton(guestClaimButton, guestNextCoinClaimAt);
+	updateButton(quickCoinButton, currentAccount ? currentAccount.nextCoinClaimAt || 0 : guestNextCoinClaimAt);
+	const quickCoinReady = !quickCoinButton.disabled;
+	quickCoinButton.classList.toggle("cooling", !quickCoinReady);
+	if (quickCoinReady) quickCoinButton.textContent = "🪙";
+	quickCoinButton.setAttribute("aria-label", quickCoinReady ? "5코인 받기" : `다음 코인까지 ${quickCoinButton.textContent}`);
 }
 
 function updateDailyBonusButton() {
@@ -1970,11 +1923,11 @@ function setCameraZoom(zoom) {
 
 function setBusy(busy) {
 	const balance = currentAccount ? currentAccount.coins : guestCoins;
-	dropButton.disabled = busy || !clawControl || politicsEntryPending || toys.length === 0 || !authGate.hidden || !prizeGate.hidden || !bagGate.hidden || !shopGate.hidden || balance < playCost;
+	dropButton.disabled = busy || !clawControl || politicsEntryPending || toys.length === 0 || !authGate.hidden || !prizeGate.hidden || !bagGate.hidden || !shopGate.hidden || !devGate.hidden || balance < playCost;
 }
 
 async function beginDrop() {
-	if (playRequestPending || politicsEntryPending || !authGate.hidden || !prizeGate.hidden || !bagGate.hidden || !shopGate.hidden) return;
+	if (playRequestPending || politicsEntryPending || !authGate.hidden || !prizeGate.hidden || !bagGate.hidden || !shopGate.hidden || !devGate.hidden) return;
 	const balance = currentAccount ? currentAccount.coins : guestCoins;
 	if (balance < playCost) {
 		showCoinShortage();
@@ -2112,8 +2065,8 @@ function handleClawEvent(event) {
 function clawInput() {
 	if (!authGate.hidden || !prizeGate.hidden || !bagGate.hidden || !shopGate.hidden) return { x: 0, z: 0 };
 	return {
-		x: THREE.MathUtils.clamp((keys.has("ArrowRight") || keys.has("d") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("a") ? 1 : 0) + joystickVector.x, -1, 1),
-		z: THREE.MathUtils.clamp((keys.has("ArrowDown") || keys.has("s") ? 1 : 0) - (keys.has("ArrowUp") || keys.has("w") ? 1 : 0) + joystickVector.z, -1, 1),
+		x: THREE.MathUtils.clamp((keys.has("ArrowRight") || keys.has("d") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("a") ? 1 : 0) + joystickVector.x + keypadVector.x, -1, 1),
+		z: THREE.MathUtils.clamp((keys.has("ArrowDown") || keys.has("s") ? 1 : 0) - (keys.has("ArrowUp") || keys.has("w") ? 1 : 0) + joystickVector.z + keypadVector.z, -1, 1),
 	};
 }
 
@@ -2246,6 +2199,58 @@ joystick.addEventListener("pointercancel", (event) => {
 	if (event.pointerId === joystickPointerId) resetJoystick();
 });
 joystick.addEventListener("lostpointercapture", resetJoystick);
+
+// Each finger holds one direction, so two buttons pressed together move the claw diagonally.
+function updateKeypadVector() {
+	const pressed = new Set(keypadPresses.values());
+	keypadVector.x = 0;
+	keypadVector.z = 0;
+	for (const button of pressed) {
+		keypadVector.x += Number(button.dataset.dx);
+		keypadVector.z += Number(button.dataset.dz);
+	}
+	for (const button of keypad.querySelectorAll(".keypad-button")) button.classList.toggle("pressed", pressed.has(button));
+}
+
+function releaseKeypad(pointerId) {
+	if (keypadPresses.delete(pointerId)) updateKeypadVector();
+}
+
+function resetKeypad() {
+	keypadPresses.clear();
+	updateKeypadVector();
+}
+
+for (const button of keypad.querySelectorAll(".keypad-button")) {
+	button.addEventListener("pointerdown", (event) => {
+		event.preventDefault();
+		keypadPresses.set(event.pointerId, button);
+		updateKeypadVector();
+		button.setPointerCapture(event.pointerId);
+	});
+	for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) button.addEventListener(type, (event) => releaseKeypad(event.pointerId));
+	button.addEventListener("contextmenu", (event) => event.preventDefault());
+}
+
+function setControlMode(mode) {
+	joystick.hidden = mode !== "joystick";
+	keypad.hidden = mode !== "keypad";
+	controlJoystickButton.setAttribute("aria-pressed", String(mode === "joystick"));
+	controlKeypadButton.setAttribute("aria-pressed", String(mode === "keypad"));
+	resetJoystick();
+	resetKeypad();
+}
+
+function chooseControlMode(mode) {
+	setControlMode(mode);
+	try { localStorage.setItem(controlModeStorageKey, mode); } catch { /* The choice lasts for this page only. */ }
+}
+
+controlJoystickButton.addEventListener("click", () => chooseControlMode("joystick"));
+controlKeypadButton.addEventListener("click", () => chooseControlMode("keypad"));
+let savedControlMode = "joystick";
+try { if (localStorage.getItem(controlModeStorageKey) === "keypad") savedControlMode = "keypad"; } catch { /* Joystick by default. */ }
+setControlMode(savedControlMode);
 
 document.querySelector("#loginTab").addEventListener("click", () => setAuthMode("login"));
 document.querySelector("#signupTab").addEventListener("click", () => setAuthMode("signup"));
@@ -2393,6 +2398,7 @@ async function claimCoins() {
 	coinClaimPending = true;
 	accountClaimButton.disabled = true;
 	guestClaimButton.disabled = true;
+	quickCoinButton.disabled = true;
 	try {
 		if (currentAccount && supabaseClient) {
 			const { data, error } = await supabaseClient.rpc("claim_coins");
@@ -2474,6 +2480,7 @@ async function claimDailyBonus() {
 
 accountClaimButton.addEventListener("click", claimCoins);
 guestClaimButton.addEventListener("click", claimCoins);
+quickCoinButton.addEventListener("click", claimCoins);
 dailyBonusButton.addEventListener("click", claimDailyBonus);
 
 document.querySelector("#openBag").addEventListener("click", () => {
@@ -2511,6 +2518,63 @@ function closeShop() {
 closeShopButton.addEventListener("click", closeShop);
 document.querySelector("#closeShopBackdrop").addEventListener("click", closeShop);
 document.querySelector("#refreshShop").addEventListener("click", refreshShop);
+
+const devCodeForm = document.querySelector("#devCodeForm");
+const devCodeInput = document.querySelector("#devCode");
+const devAddCoinsButton = document.querySelector("#devAddCoins");
+const devStatus = document.querySelector("#devStatus");
+const devSummary = document.querySelector("#devSummary");
+const openDevTabButton = document.querySelector("#openDevTab");
+// SHA-256 of the developer code, so the plain code is not shipped in the page source.
+const devCodeHash = "7a63b8407029438357efaf968a42bce3b64ab71a840cd18e88763a2d986e177c";
+const devCoinPack = 1000;
+let devModeEnabled = false;
+
+async function sha256Hex(text) {
+	const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+	return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+function openDevTab() {
+	if (currentAccount) return;
+	devGate.hidden = false;
+	setBusy(true);
+	(devModeEnabled ? devAddCoinsButton : devCodeInput).focus();
+}
+function closeDevTab() {
+	devGate.hidden = true;
+	devCodeInput.value = "";
+	setBusy(!clawIsIdle());
+	openDevTabButton.focus();
+}
+openDevTabButton.addEventListener("click", openDevTab);
+document.querySelector("#closeDev").addEventListener("click", closeDevTab);
+document.querySelector("#closeDevBackdrop").addEventListener("click", closeDevTab);
+devCodeForm.addEventListener("submit", async (event) => {
+	event.preventDefault();
+	const matches = (await sha256Hex(devCodeInput.value)) === devCodeHash;
+	devCodeInput.value = "";
+	if (!matches) {
+		devStatus.textContent = "코드가 올바르지 않아요.";
+		return;
+	}
+	devModeEnabled = true;
+	devCodeForm.hidden = true;
+	devAddCoinsButton.hidden = false;
+	devSummary.textContent = "개발자 환경이 켜졌어요.";
+	devStatus.textContent = "";
+	devAddCoinsButton.focus();
+});
+devAddCoinsButton.addEventListener("click", () => {
+	if (!devModeEnabled) return;
+	if (currentAccount) {
+		closeDevTab();
+		return;
+	}
+	guestCoins = Math.min(guestCoins + devCoinPack, Number.MAX_SAFE_INTEGER);
+	saveGuestCoins();
+	guestCoinsLabel.textContent = String(guestCoins);
+	devStatus.textContent = `${devCoinPack}코인을 받았어요. (보유 ${guestCoins.toLocaleString("ko-KR")}코인)`;
+});
 document.querySelector("#closePrize").addEventListener("click", closePrize);
 sharePrizeButton.addEventListener("click", sharePrize);
 mapAnimalsButton.addEventListener("click", () => switchMap("animals"));
@@ -2541,6 +2605,8 @@ document.querySelector("#logout").addEventListener("click", () => {
 });
 
 window.addEventListener("keydown", (event) => {
+	if (event.key === "Escape" && !devGate.hidden) closeDevTab();
+	if (event.target instanceof HTMLInputElement) return;
 	const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
 	if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " "].includes(event.key)) event.preventDefault();
 	keys.add(key);
@@ -2550,7 +2616,7 @@ window.addEventListener("keydown", (event) => {
 	if (event.key === "Escape" && !prizeGate.hidden) closePrize();
 });
 window.addEventListener("keyup", (event) => keys.delete(event.key.length === 1 ? event.key.toLowerCase() : event.key));
-window.addEventListener("blur", () => { keys.clear(); resetJoystick(); });
+window.addEventListener("blur", () => { keys.clear(); resetJoystick(); resetKeypad(); });
 canvas.addEventListener("pointermove", (event) => {
 	if (event.pointerId !== cameraDrag.pointerId) return;
 	const deltaX = event.clientX - cameraDrag.x;
